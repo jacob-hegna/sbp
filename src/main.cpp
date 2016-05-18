@@ -7,7 +7,6 @@
 
 #include "bblock.h"
 
-
 uint64_t predict_branch(uint64_t start) {
     BBlock block(start);
 
@@ -26,8 +25,8 @@ int main(int argc, char *argv[]) {
     path = std::string(argv[1]);
     uint64_t start = 0x0;
     uint64_t end   = predict_branch(start);
-  	std::cout << "The block located at 0x" << std::hex << start
-  			  << " will likely branch to 0x" << std::hex << end << std::endl;
+  	std::cout << "0x" << std::hex << start << " --> 0x"
+              << std::hex << end << std::endl;
 
-  	return -1;
+  	return 0;
 }

@@ -2,6 +2,7 @@
 #define __BBLOCK_H_
 
 #include <stdint.h>
+#include <string>
 #include <vector>
 
 #include "asm/ins.h"
