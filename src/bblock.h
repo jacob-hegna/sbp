@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "asm/ins.h"
+#include "asm/jmp.h"
 
 class BBlock {
 public:
@@ -30,8 +31,18 @@ public:
     	return start;
     }
 
+    // returns the address of the next fall-through block
+    uint64_t fall() {
+        Jmp *j = (Jmp*)(&ins.at(0));
+        return j->get_from() + ins.at(0).get_size();
+    }
+
     void push_back(Ins i) {
         ins.push_back(i);
+    }
+
+    std::vector<Ins> get_ins() {
+        return ins;
     }
 private:
 	uint64_t start;

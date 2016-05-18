@@ -59,8 +59,18 @@ public:
         return (from - to > 0);
     }
 
+    uint64_t get_to() {
+        return to;
+    }
+    uint64_t get_from() {
+        return from;
+    }
+    JmpType get_type() {
+        return type;
+    }
+
 private:
-    unsigned int to, from;
+    uint64_t to, from;
     JmpType type;
 };
 
