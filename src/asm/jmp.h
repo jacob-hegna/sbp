@@ -43,34 +43,32 @@ public:
     Jmp(){
 
     }
-    Jmp(JmpType type) {
-        init(type);
+    Jmp(JmpType type, uint64_t to, uint64_t from) : Ins(from) {
+        init(type, to);
     }
 
     ~Jmp() {
 
     }
 
-    void init(JmpType type) {
+    void init(JmpType type, uint64_t to) {
         this->type = type;
+        this->to   = to;
     }
 
     bool is_loop() {
-        return (from - to > 0);
+        return loc > to;
     }
 
     uint64_t get_to() {
         return to;
-    }
-    uint64_t get_from() {
-        return from;
     }
     JmpType get_type() {
         return type;
     }
 
 private:
-    uint64_t to, from;
+    uint64_t to;
     JmpType type;
 };
 

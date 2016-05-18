@@ -8,16 +8,26 @@ public:
     Ins() {
 
     }
-
+    Ins(uint64_t loc) {
+        init(loc);
+    }
     ~Ins() {
 
+    }
+
+    void init(uint64_t loc) {
+        this->loc = loc;
     }
 
     uint8_t get_size() {
         return size;
     }
-private:
+    uint64_t get_loc() {
+
+    }
+protected:
     uint8_t size;
+    uint64_t loc;
 };
 
 #endif

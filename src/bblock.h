@@ -28,25 +28,30 @@ public:
 
     // returns the address the block is predicted to branch to
     uint64_t next() {
-    	return start;
+        return combined_h();
     }
 
     // returns the address of the next fall-through block
     uint64_t fall() {
-        Jmp *j = (Jmp*)(&ins.at(0));
-        return j->get_from() + ins.at(0).get_size();
+        Jmp *j = (Jmp*)(ins.at(0));
+        return j->get_loc() + ins.back()->get_size();
     }
 
-    void push_back(Ins i) {
+    void push_back(Ins *i) {
         ins.push_back(i);
     }
 
-    std::vector<Ins> get_ins() {
+    std::vector<Ins*> get_ins() {
         return ins;
     }
 private:
 	uint64_t start;
-    std::vector<Ins> ins;
+    std::vector<Ins*> ins;
+
+    uint64_t combined_h();
+    uint64_t opcode_h();
+    uint64_t loop_h();
+    uint64_t rand_h();
 };
 
 

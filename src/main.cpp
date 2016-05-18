@@ -10,6 +10,12 @@
 uint64_t predict_branch(uint64_t start) {
     BBlock block(start);
 
+    Ins ins(start);
+    Jmp jmp(JmpType::J0, 0xFFFAAAAFFFFAAAA, start);
+
+    block.push_back(&ins);
+    block.push_back(&jmp);
+
     return block.next();
 }
 
@@ -23,7 +29,7 @@ int main(int argc, char *argv[]) {
     }
     
     path = std::string(argv[1]);
-    uint64_t start = 0x0;
+    uint64_t start = 0x01;
     uint64_t end   = predict_branch(start);
   	std::cout << "0x" << std::hex << start << " --> 0x"
               << std::hex << end << std::endl;
