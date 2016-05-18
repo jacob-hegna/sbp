@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
     path = std::string(argv[1]);
     uint64_t start = 0x01;
     uint64_t end   = predict_branch(start);
-  	std::cout << "0x" << std::hex << start << " --> 0x"
+    std::cout << "0x" << std::hex << start << " --> 0x"
               << std::hex << end << std::endl;
 
-  	return 0;
+    return 0;
 }
