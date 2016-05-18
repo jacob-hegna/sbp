@@ -49,7 +49,7 @@ uint64_t BBlock::loop_h() {
 
 uint64_t BBlock::opcode_h() {
     Jmp *exit = (Jmp*)(ins.back());
-    std::list<JmpType> zero_or_greater = {
+    std::array<JmpType, 6> zero_or_greater = {
         JmpType::JZ,
         JmpType::JNB,
         JmpType::JA,
