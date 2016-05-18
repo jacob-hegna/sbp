@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <random>
+#include <list>
+#include <algorithm>
 
 void BBlock::parse() {
     int col_start = 44;
@@ -47,7 +49,17 @@ uint64_t BBlock::loop_h() {
 
 uint64_t BBlock::opcode_h() {
     Jmp *exit = (Jmp*)(ins.back());
-    if(exit->get_type() == JmpType::JZ) {
+    std::list<JmpType> zero_or_greater = {
+        JmpType::JZ,
+        JmpType::JNB,
+        JmpType::JA,
+        JmpType::JGE,
+        JmpType::JNL,
+        JmpType::JG 
+    };
+
+    if(std::find(zero_or_greater.begin(), zero_or_greater.end(),
+            exit->get_type()) != zero_or_greater.end()) {
         return exit->get_to();
     }
 

@@ -18,7 +18,7 @@ CCFLAGS     = -c -g -w -O2 -m$(ARCH) -std=c++11
 LINKFLAGS   = -m$(ARCH)
 
 
-TARGET = sbr
+TARGET = sbp
 
 .PHONY: all clean
 
