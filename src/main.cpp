@@ -10,10 +10,13 @@
 uint64_t predict_branch(uint64_t start) {
     BBlock block(start);
 
-    Ins ins(start);
-    Jmp jmp(JmpType::J0, 0xFFFAAAAFFFFAAAA, start);
+    Ins ins(start, 2);
+    Ins ins2(start + ins.get_size(), 2);
+    Jmp jmp(JmpType::JNZ, 0xFF, start + ins.get_size() + ins2.get_size(), 4);
 
+    // manually creating block instead of parsing
     block.push_back(&ins);
+    block.push_back(&ins2);
     block.push_back(&jmp);
 
     return block.next();
@@ -29,7 +32,7 @@ int main(int argc, char *argv[]) {
     }
     
     path = std::string(argv[1]);
-    uint64_t start = 0x01;
+    uint64_t start = 0x01; // initial block address
     uint64_t end   = predict_branch(start);
     std::cout << "0x" << std::hex << start << " --> 0x"
               << std::hex << end << std::endl;

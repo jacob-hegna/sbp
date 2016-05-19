@@ -33,7 +33,7 @@ public:
 
     // returns the address of the next fall-through block
     uint64_t fall() {
-        Jmp *j = (Jmp*)(ins.at(0));
+        Jmp *j = (Jmp*)(ins.back());
         return j->get_loc() + ins.back()->get_size();
     }
 

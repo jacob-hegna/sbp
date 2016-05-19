@@ -2,7 +2,6 @@
 
 #include <functional>
 #include <random>
-#include <list>
 #include <algorithm>
 
 void BBlock::parse() {
@@ -30,6 +29,9 @@ uint64_t BBlock::combined_h() {
         &BBlock::rand_h
     };
 
+    // iterate through each heuristic, if any of them don't return the
+    // FAIL_H error code, break out and use that address
+    // Otherwise, it will default to the rand_h heuristic
     for(auto heuristic : heuristics) {
         if((addr = (this->*heuristic)()) != FAIL_H) break;
     }
@@ -37,6 +39,10 @@ uint64_t BBlock::combined_h() {
     return addr;
 }
 
+/* 
+ * detects if the basic block results in a loop, if so, predicts it will always
+ * loop back
+ */
 uint64_t BBlock::loop_h() {
     Jmp *exit = (Jmp*)(ins.back());
     if(exit->is_loop()) {
@@ -46,10 +52,22 @@ uint64_t BBlock::loop_h() {
     return FAIL_H;
 }
 
+/*
+ * determines the type of opcode which exits the basic block and makes a
+ * prediction based off of that branch condition
+ */
 
 uint64_t BBlock::opcode_h() {
     Jmp *exit = (Jmp*)(ins.back());
-    std::array<JmpType, 6> zero_or_greater = {
+
+    std::function<bool(std::vector<JmpType>, JmpType)> jmp_matches =
+    [](std::vector<JmpType> jmps, JmpType jmp) {
+        return (std::find(jmps.begin(), jmps.end(), jmp) != jmps.end());
+    };
+
+    // many functions return 0 or greater to indicate success, so we predict
+    // these branches will be taken
+    std::vector<JmpType> jmp_zero_or_greater = {
         JmpType::JZ,
         JmpType::JNB,
         JmpType::JA,
@@ -57,15 +75,30 @@ uint64_t BBlock::opcode_h() {
         JmpType::JNL,
         JmpType::JG 
     };
-
-    if(std::find(zero_or_greater.begin(), zero_or_greater.end(),
-            exit->get_type()) != zero_or_greater.end()) {
+    if(jmp_matches(jmp_zero_or_greater, exit->get_type())) {
         return exit->get_to();
+    }
+
+    // if the function returns negative or less than some target, we predict the
+    // branch will fall-through as we should expect many of those to be error
+    // codes
+    std::vector<JmpType> jmp_negative = {
+        JmpType::JNZ,
+        JmpType::JB,
+        JmpType::JNAE,
+        JmpType::JL,
+        JmpType::JNGE
+    };
+    if(jmp_matches(jmp_negative, exit->get_type())) {
+        return fall();
     }
 
     return FAIL_H;
 }
 
+/*
+ * if no previous heuristics create a useful prediction, default to random
+ */
 uint64_t BBlock::rand_h() {
     Jmp *exit = (Jmp*)(ins.back());
     

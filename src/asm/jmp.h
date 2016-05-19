@@ -4,8 +4,8 @@
 #include "ins.h"
 
 enum class JmpType {
-    J0,   // Jump if overflow
-    JN0,  // Jump if not overflow
+    JO,   // Jump if overflow
+    JNO,  // Jump if not overflow
     JS,   // Jump if sign
     JNS,  // Jump if not sign
     JE,   // Jump if equal
@@ -16,7 +16,7 @@ enum class JmpType {
     JNAE, // Jump if not above or equal
     JC,   // Jump if carry
     JNB,  // Jump if not below
-    JAE,  // Jump if below or equal
+    JAE,  // Jump if above or equal
     JNC,  // Jump if not carry
     JBE,  // Jump if below or equal
     JNA,  // Jump if not above
@@ -43,7 +43,7 @@ public:
     Jmp(){
 
     }
-    Jmp(JmpType type, uint64_t to, uint64_t from) : Ins(from) {
+    Jmp(JmpType type, uint64_t to, uint64_t from, uint8_t size) : Ins(from, size) {
         init(type, to);
     }
 
