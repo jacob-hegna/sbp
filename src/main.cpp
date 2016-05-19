@@ -23,6 +23,7 @@ uint64_t predict_branch(uint64_t start) {
 }
 
 int main(int argc, char *argv[]) {
+    /* not parsing yet
     std::string path;
 
     if(argc < 2) {
@@ -32,6 +33,7 @@ int main(int argc, char *argv[]) {
     }
     
     path = std::string(argv[1]);
+    */
     uint64_t start = 0x01; // initial block address
     uint64_t end   = predict_branch(start);
     std::cout << "0x" << std::hex << start << " --> 0x"

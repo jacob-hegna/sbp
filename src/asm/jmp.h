@@ -40,32 +40,15 @@ enum class JmpType {
 
 class Jmp : public Ins {
 public:
-    Jmp(){
+    Jmp();
+    Jmp(JmpType type, uint64_t to,uint64_t from, uint8_t size);
+    ~Jmp();
 
-    }
-    Jmp(JmpType type, uint64_t to, uint64_t from, uint8_t size) : Ins(from, size) {
-        init(type, to);
-    }
+    void init(JmpType type, uint64_t to);
+    bool is_loop();
 
-    ~Jmp() {
-
-    }
-
-    void init(JmpType type, uint64_t to) {
-        this->type = type;
-        this->to   = to;
-    }
-
-    bool is_loop() {
-        return loc > to;
-    }
-
-    uint64_t get_to() {
-        return to;
-    }
-    JmpType get_type() {
-        return type;
-    }
+    uint64_t get_to();
+    JmpType get_type();
 
 private:
     uint64_t to;

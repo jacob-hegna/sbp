@@ -4,8 +4,40 @@
 #include <random>
 #include <algorithm>
 
+
+BBlock::BBlock() {
+
+}
+BBlock::BBlock(uint64_t addr) {
+    init(addr);
+}
+BBlock::~BBlock() {
+     
+}
+
+void BBlock::init(uint64_t addr) {
+    start = addr;
+}
+
 void BBlock::parse() {
     int col_start = 44;
+}
+
+uint64_t BBlock::next() {
+    return combined_h();
+}
+
+uint64_t BBlock::fall() {
+    Jmp *j = (Jmp*)(ins.back());
+    return j->get_loc() + ins.back()->get_size();
+}
+
+void BBlock::push_back(Ins *i) {
+    ins.push_back(i);
+}
+
+std::vector<Ins*> BBlock::get_ins() {
+    return ins;
 }
 
 
@@ -56,14 +88,19 @@ uint64_t BBlock::loop_h() {
  * determines the type of opcode which exits the basic block and makes a
  * prediction based off of that branch condition
  */
-
 uint64_t BBlock::opcode_h() {
     Jmp *exit = (Jmp*)(ins.back());
 
+    // this function (actually a pointer to a lambda) detects whether the given
+    // conditional branch (jmp) is in the given vector of branches (jmps)
     std::function<bool(std::vector<JmpType>, JmpType)> jmp_matches =
     [](std::vector<JmpType> jmps, JmpType jmp) {
         return (std::find(jmps.begin(), jmps.end(), jmp) != jmps.end());
     };
+
+    // NOTE: might want to reduce some of the greater/less than opcode filtering
+    // because MIPS had greater/less than zero, but x86 only has greater/less
+    // than a given register
 
     // many functions return 0 or greater to indicate success, so we predict
     // these branches will be taken
@@ -96,6 +133,10 @@ uint64_t BBlock::opcode_h() {
     return FAIL_H;
 }
 
+uint64_t BBlock::call_s_h() {
+
+}
+
 /*
  * if no previous heuristics create a useful prediction, default to random
  */
@@ -106,9 +147,5 @@ uint64_t BBlock::rand_h() {
     std::mt19937 rng(rd());
     std::uniform_int_distribution<int> dist(0, 1);
 
-    if(dist(rng)) {
-        return exit->get_to();
-    } else {
-        return exit->get_loc();
-    }
+    return (dist(rng) ? exit->get_to() : fall());
 }
