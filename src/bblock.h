@@ -34,6 +34,9 @@ private:
 	uint64_t start;
     std::vector<Ins*> ins;
 
+
+    // the below heuristics are defined in heuristics.cpp
+
     // the combined heuristics
     uint64_t combined_h();
 
