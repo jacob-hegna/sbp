@@ -32,8 +32,20 @@ uint64_t BBlock::fall() {
     return j->get_loc() + ins.back()->get_size();
 }
 
+uint64_t BBlock::jmp() {
+    Jmp *j = (Jmp*)(ins.back());
+    return j->get_to();
+}
+
 void BBlock::push_back(Ins *i) {
+    if(ins.size() > 0) {
+        i->set_loc(ins.back()->get_loc() + ins.back()->get_size());
+    }
     ins.push_back(i);
+}
+
+uint64_t BBlock::get_loc() {
+    return start;
 }
 
 std::vector<Ins*> BBlock::get_ins() {
@@ -58,6 +70,7 @@ uint64_t BBlock::combined_h() {
     auto heuristics = {
         &BBlock::loop_h,
         &BBlock::opcode_h,
+        &BBlock::call_s_h,
         &BBlock::rand_h
     };
 
@@ -133,8 +146,46 @@ uint64_t BBlock::opcode_h() {
     return FAIL_H;
 }
 
+/*
+ * checks each successor branch for a CALL instruction, chooses the one WITHOUT
+ * the CALL. if each has a CALL, return FAIL_H
+ */
 uint64_t BBlock::call_s_h() {
+    BBlock next_fall(this->fall());
+    BBlock next_jmp(this->jmp());
 
+    // <test code>
+    Ins ins_fall(this->fall(), 2, InsType::INS);
+    Ins ins_jmp(this->jmp(), 2, InsType::CALL);
+
+    next_fall.push_back(&ins_fall);
+    next_jmp.push_back(&ins_jmp);
+    // </test code>
+
+    bool next_fall_call = false;
+    for(Ins *i : next_fall.get_ins()) {
+        if(i->get_type() == InsType::CALL) {
+            next_fall_call = true;
+            break;
+        }
+    }
+
+    bool next_jmp_call = false;
+    for(Ins *i : next_jmp.get_ins()) {
+        if(i->get_type() == InsType::CALL) {
+            next_jmp_call = true;
+            break;
+        }
+    }
+
+    if(next_fall_call && next_jmp_call) { // guards against the dual case
+        return FAIL_H;
+    } else if(next_fall_call) {           // note the returns are the converse
+        return next_jmp.get_loc();        // of what would normally be expected
+    } else if(next_jmp_call) {
+        return next_fall.get_loc();
+    }
+    return FAIL_H;
 }
 
 /*

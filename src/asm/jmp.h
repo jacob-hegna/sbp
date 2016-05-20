@@ -41,7 +41,7 @@ enum class JmpType {
 class Jmp : public Ins {
 public:
     Jmp();
-    Jmp(JmpType type, uint64_t to,uint64_t from, uint8_t size);
+    Jmp(JmpType type, uint64_t to, uint64_t from, uint8_t size);
     ~Jmp();
 
     void init(JmpType type, uint64_t to);

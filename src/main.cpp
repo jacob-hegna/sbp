@@ -10,13 +10,13 @@
 uint64_t predict_branch(uint64_t start) {
     BBlock block(start);
 
-    Ins ins(start, 2);
-    Ins ins2(start + ins.get_size(), 2);
-    Jmp jmp(JmpType::JNZ, 0xFF, start + ins.get_size() + ins2.get_size(), 4);
+    Ins ins_a(start, 2);
+    Ins ins_b(start + ins_a.get_size(), 2);
+    Jmp jmp(JmpType::JO, 0xFF, start + ins_a.get_size() + ins_b.get_size(), 4);
 
     // manually creating block instead of parsing
-    block.push_back(&ins);
-    block.push_back(&ins2);
+    block.push_back(&ins_a);
+    block.push_back(&ins_b);
     block.push_back(&jmp);
 
     return block.next();

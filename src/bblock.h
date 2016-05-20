@@ -23,8 +23,12 @@ public:
     // returns the address of the next fall-through block
     uint64_t fall();
 
+    // returns the address of the next condition jmp-to block
+    uint64_t jmp();
+
     void push_back(Ins *i);
 
+    uint64_t get_loc();
     std::vector<Ins*> get_ins();
 private:
 	uint64_t start;
