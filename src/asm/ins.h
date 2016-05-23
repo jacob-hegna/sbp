@@ -6,7 +6,8 @@
 enum class InsType {
     INS, // unhandled case
     JMP,
-    CALL
+    CALL,
+    RET
 };
 
 class Ins {

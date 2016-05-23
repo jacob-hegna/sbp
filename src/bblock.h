@@ -46,11 +46,10 @@ private:
 
     // heuristic on successor block(s)
     uint64_t call_s_h();
+    uint64_t return_s_h();
 
     // default random heuristic
     uint64_t rand_h();
 };
-
-
 
 #endif
