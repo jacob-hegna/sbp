@@ -42,9 +42,9 @@ uint64_t BBlock::combined_h() {
  * loop back
  */
 uint64_t BBlock::loop_h() {
-    Jmp *exit = (Jmp*)(get_ins().back());
+    Jmp *exit = (Jmp*)(get_ins().back().get());
     if(exit->is_loop()) {
-        return this->jmp();
+        return this->get_jmp();
     }
 
     return FAIL_H;
@@ -55,7 +55,7 @@ uint64_t BBlock::loop_h() {
  * prediction based off of that branch condition
  */
 uint64_t BBlock::opcode_h() {
-    Jmp *exit = (Jmp*)(get_ins().back());
+    Jmp *exit = (Jmp*)(get_ins().back().get());
 
     // this function (actually a pointer to a lambda) detects whether the given
     // conditional branch (jmp) is in the given vector of branches (jmps)
@@ -79,7 +79,7 @@ uint64_t BBlock::opcode_h() {
         JmpType::JG 
     };
     if(jmp_matches(jmp_zero_or_greater, exit->get_type())) {
-        return this->jmp();
+        return this->get_jmp();
     }
 
     // if the function returns negative or less than some target, we predict the
@@ -93,7 +93,7 @@ uint64_t BBlock::opcode_h() {
         JmpType::JNGE
     };
     if(jmp_matches(jmp_negative, exit->get_type())) {
-        return this->fall();
+        return this->get_fall();
     }
 
     return FAIL_H;
@@ -104,19 +104,19 @@ uint64_t BBlock::opcode_h() {
  * the call. if each has a call, return FAIL_H
  */
 uint64_t BBlock::call_s_h() {
-    BBlock next_fall(this->fall());
-    BBlock next_jmp(this->jmp());
+    BBlock next_fall(this->get_fall());
+    BBlock next_jmp(this->get_jmp());
 
     // <test code>
-    Ins ins_fall(this->fall(), 2, InsType::INS);
-    Ins ins_jmp(this->jmp(), 2, InsType::INS);
+    std::shared_ptr<Ins> ins_fall(new Ins(this->get_fall(), 2, InsType::INS));
+    std::shared_ptr<Ins> ins_jmp(new Ins(this->get_jmp(), 2, InsType::INS));
 
-    next_fall.push_back(&ins_fall);
-    next_jmp.push_back(&ins_jmp);
+    next_fall.push_back(ins_fall);
+    next_jmp.push_back(ins_jmp);
     // </test code>
 
     bool next_fall_call = false;
-    for(Ins *i : next_fall.get_ins()) {
+    for(std::shared_ptr<Ins> i : next_fall.get_ins()) {
         if(i->get_type() == InsType::CALL) {
             next_fall_call = true;
             break;
@@ -124,7 +124,7 @@ uint64_t BBlock::call_s_h() {
     }
 
     bool next_jmp_call = false;
-    for(Ins *i : next_jmp.get_ins()) {
+    for(std::shared_ptr<Ins> i : next_jmp.get_ins()) {
         if(i->get_type() == InsType::CALL) {
             next_jmp_call = true;
             break;
@@ -146,19 +146,19 @@ uint64_t BBlock::call_s_h() {
  * WITHOUT the return. if each has a return, return FAIL_H
  */
 uint64_t BBlock::return_s_h() {
-    BBlock next_fall(this->fall());
-    BBlock next_jmp(this->jmp());
+    BBlock next_fall(this->get_fall());
+    BBlock next_jmp(this->get_jmp());
 
     // <test code>
-    Ins ins_fall(this->fall(), 2, InsType::INS);
-    Ins ins_jmp(this->jmp(), 2, InsType::INS);
+    std::shared_ptr<Ins> ins_fall(new Ins(this->get_fall(), 2, InsType::INS));
+    std::shared_ptr<Ins> ins_jmp(new Ins(this->get_jmp(), 2, InsType::INS));
 
-    next_fall.push_back(&ins_fall);
-    next_jmp.push_back(&ins_jmp);
+    next_fall.push_back(ins_fall);
+    next_jmp.push_back(ins_jmp);
     // </test code>
 
     bool next_fall_ret = false;
-    for(Ins *i : next_fall.get_ins()) {
+    for(std::shared_ptr<Ins> i : next_fall.get_ins()) {
         if(i->get_type() == InsType::RET) {
             next_fall_ret = true;
             break;
@@ -166,7 +166,7 @@ uint64_t BBlock::return_s_h() {
     }
 
     bool next_jmp_ret = false;
-    for(Ins *i : next_jmp.get_ins()) {
+    for(std::shared_ptr<Ins> i : next_jmp.get_ins()) {
         if(i->get_type() == InsType::RET) {
             next_jmp_ret = true;
             break;
@@ -192,5 +192,5 @@ uint64_t BBlock::rand_h() {
     std::mt19937 rng(rd());
     std::uniform_int_distribution<int> dist(0, 1);
 
-    return (dist(rng) ? jmp() : fall());
+    return (dist(rng) ? get_jmp() : get_fall());
 }

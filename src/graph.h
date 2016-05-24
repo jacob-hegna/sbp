@@ -1,26 +1,26 @@
 #ifndef __GRAPH_H_
 #define __GRAPH_H_
 
-#include "BBlock"
-
 #include <stdint.h>
 #include <vector>
 
-class Node {
-public:
-
-private:
-    Node *left, *right;
-}
+#include "bblock.h"
 
 class Graph {
 public:
     Graph();
     ~Graph();
 
-    Node* search(uint64_t);
+    void insert(uint64_t addr);
+    BBlock* search(uint64_t addr);
+    void delete_tree();
+
 private:
-    Node *root;
+    BBlock *root;
+
+    void insert(uint64_t addr, BBlock *parent, bool jmp);
+    BBlock* search(uint64_t addr, BBlock *leaf);
+    void delete_tree(BBlock *leaf);
 };
 
 #endif
