@@ -13,10 +13,9 @@ enum class InsType {
 class Ins {
 public:
     Ins();
-    Ins(uint64_t loc, uint8_t size, InsType type = InsType::INS);
-    ~Ins();
+    Ins(uint64_t loc, uint8_t size, InsType ins_type = InsType::INS);
 
-    void init(uint64_t loc, uint8_t size, InsType type = InsType::INS);
+    void init(uint64_t loc, uint8_t size, InsType ins_type = InsType::INS);
 
     void set_size(uint8_t size);
     void set_loc(uint64_t loc);
@@ -24,12 +23,12 @@ public:
 
     uint8_t get_size();
     uint64_t get_loc();
-    InsType get_type();
+    InsType get_ins_type();
 protected:
     uint8_t size;
     uint64_t loc;
 
-    InsType type;
+    InsType ins_type;
 };
 
 #endif

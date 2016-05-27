@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <string>
+#include <sstream>
 #include <vector>
 #include <memory>
 
@@ -16,12 +17,17 @@ class BBlock {
 public:
     BBlock();
     BBlock(uint64_t addr);
-    ~BBlock();
 
     void init(uint64_t addr);
 
+    // returns human-readable information about the basic block
+    std::string print_info();
+
     // returns the address the block is predicted to branch to
     uint64_t next();
+
+    // returns the last instruction in the block, presumably a Jmp
+    std::shared_ptr<Jmp> get_last();
 
     // returns the address of the next fall-through block
     uint64_t get_fall();
@@ -30,6 +36,7 @@ public:
     uint64_t get_jmp();
 
     void push_back(std::shared_ptr<Ins>);
+    void set_ins(std::vector<std::shared_ptr<Ins>>);
 
     uint64_t get_loc();
     std::vector<std::shared_ptr<Ins>> get_ins();

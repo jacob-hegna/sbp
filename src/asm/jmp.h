@@ -3,7 +3,11 @@
 
 #include "ins.h"
 
-enum class JmpType {
+#include <array>
+#include <algorithm>
+
+enum struct JmpType {
+    JMP,  // Unconditional jmp
     JO,   // Jump if overflow
     JNO,  // Jump if not overflow
     JS,   // Jump if sign
@@ -38,21 +42,31 @@ enum class JmpType {
     JECXZ // Jump if $ECX register is 0
 };
 
+
+
 class Jmp : public Ins {
 public:
     Jmp();
-    Jmp(JmpType type, uint64_t to, uint64_t from, uint8_t size);
-    ~Jmp();
+    Jmp(JmpType jmp_type, uint64_t to, uint64_t from, uint8_t size);
 
-    void init(JmpType type, uint64_t to);
+    void init(JmpType jmp_type, uint64_t to);
     bool is_loop();
 
+    static JmpType str_to_jmp(std::string jmp_str);
+
+    void set_static(bool static_jmp);
+
     uint64_t get_to();
-    JmpType get_type();
+    JmpType get_jmp_type();
+    bool get_static();
 
 private:
     uint64_t to;
-    JmpType type;
+    JmpType jmp_type;
+
+    bool static_jmp;
+
+    static std::array<std::string, 33> jmp_strings;
 };
 
 #endif

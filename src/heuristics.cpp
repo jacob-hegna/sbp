@@ -78,7 +78,7 @@ uint64_t BBlock::opcode_h() {
         JmpType::JNL,
         JmpType::JG 
     };
-    if(jmp_matches(jmp_zero_or_greater, exit->get_type())) {
+    if(jmp_matches(jmp_zero_or_greater, exit->get_jmp_type())) {
         return this->get_jmp();
     }
 
@@ -92,7 +92,7 @@ uint64_t BBlock::opcode_h() {
         JmpType::JL,
         JmpType::JNGE
     };
-    if(jmp_matches(jmp_negative, exit->get_type())) {
+    if(jmp_matches(jmp_negative, exit->get_jmp_type())) {
         return this->get_fall();
     }
 
@@ -117,7 +117,7 @@ uint64_t BBlock::call_s_h() {
 
     bool next_fall_call = false;
     for(std::shared_ptr<Ins> i : next_fall.get_ins()) {
-        if(i->get_type() == InsType::CALL) {
+        if(i->get_ins_type() == InsType::CALL) {
             next_fall_call = true;
             break;
         }
@@ -125,7 +125,7 @@ uint64_t BBlock::call_s_h() {
 
     bool next_jmp_call = false;
     for(std::shared_ptr<Ins> i : next_jmp.get_ins()) {
-        if(i->get_type() == InsType::CALL) {
+        if(i->get_ins_type() == InsType::CALL) {
             next_jmp_call = true;
             break;
         }
@@ -159,7 +159,7 @@ uint64_t BBlock::return_s_h() {
 
     bool next_fall_ret = false;
     for(std::shared_ptr<Ins> i : next_fall.get_ins()) {
-        if(i->get_type() == InsType::RET) {
+        if(i->get_ins_type() == InsType::RET) {
             next_fall_ret = true;
             break;
         }
@@ -167,7 +167,7 @@ uint64_t BBlock::return_s_h() {
 
     bool next_jmp_ret = false;
     for(std::shared_ptr<Ins> i : next_jmp.get_ins()) {
-        if(i->get_type() == InsType::RET) {
+        if(i->get_ins_type() == InsType::RET) {
             next_jmp_ret = true;
             break;
         }
