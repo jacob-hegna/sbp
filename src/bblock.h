@@ -6,6 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <memory>
+#include <iostream>
 
 #include "asm/ins.h"
 #include "asm/jmp.h"
@@ -16,9 +17,9 @@ class BBlock {
     friend class Graph;
 public:
     BBlock();
-    BBlock(uint64_t addr);
+    BBlock(uint64_t block_tag, uint64_t block_addr);
 
-    void init(uint64_t addr);
+    void init(uint64_t block_tag, uint64_t block_addr);
 
     // returns human-readable information about the basic block
     std::string print_info();
@@ -39,9 +40,12 @@ public:
     void set_ins(std::vector<std::shared_ptr<Ins>>);
 
     uint64_t get_loc();
+    uint64_t get_tag();
     std::vector<std::shared_ptr<Ins>> get_ins();
 private:
-	uint64_t start;
+	uint64_t block_addr;
+    uint64_t block_tag;
+
     std::vector<std::shared_ptr<Ins>> ins;
 
     // for the graph

@@ -9,21 +9,13 @@ Graph::~Graph() {
 }
 
 void Graph::insert(uint64_t addr) {
-    BBlock *new_block;
-    new_block->start  = addr;
-    new_block->fall   = nullptr;
-    new_block->jmp    = nullptr;
-    new_block->parent = nullptr;
+    BBlock *new_block = new BBlock(0x0, addr);
 
     root = new_block;
 }
 
 void Graph::insert(uint64_t addr, BBlock *parent, bool jmp) {
-    BBlock *new_block;
-    new_block->start  = addr;
-    new_block->fall   = nullptr;
-    new_block->jmp    = nullptr;
-    new_block->parent = parent;
+    BBlock *new_block = new BBlock(0x0, addr);
 
     if(jmp) {
         parent->jmp = new_block;
@@ -38,7 +30,7 @@ BBlock* Graph::search(uint64_t addr) {
 
 BBlock* Graph::search(uint64_t addr, BBlock *leaf) {
     if(leaf != nullptr) {
-        if(leaf->start == addr) {
+        if(leaf->get_loc() == addr) {
             return leaf;
         } else {
             BBlock *ret = nullptr;

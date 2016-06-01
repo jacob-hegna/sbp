@@ -10,7 +10,7 @@
 #include "parse.h"
 
 uint64_t predict_branch(uint64_t start) {
-    BBlock block(start);
+    BBlock block(0x0, start);
 
     Ins ins_a(start, 2);
     Ins ins_b(start + ins_a.get_size(), 2);

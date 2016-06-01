@@ -104,8 +104,8 @@ uint64_t BBlock::opcode_h() {
  * the call. if each has a call, return FAIL_H
  */
 uint64_t BBlock::call_s_h() {
-    BBlock next_fall(this->get_fall());
-    BBlock next_jmp(this->get_jmp());
+    BBlock next_fall(0x0, this->get_fall());
+    BBlock next_jmp(0x0, this->get_jmp());
 
     // <test code>
     std::shared_ptr<Ins> ins_fall(new Ins(this->get_fall(), 2, InsType::INS));
@@ -146,8 +146,8 @@ uint64_t BBlock::call_s_h() {
  * WITHOUT the return. if each has a return, return FAIL_H
  */
 uint64_t BBlock::return_s_h() {
-    BBlock next_fall(this->get_fall());
-    BBlock next_jmp(this->get_jmp());
+    BBlock next_fall(0x0, this->get_fall());
+    BBlock next_jmp(0x0, this->get_jmp());
 
     // <test code>
     std::shared_ptr<Ins> ins_fall(new Ins(this->get_fall(), 2, InsType::INS));
