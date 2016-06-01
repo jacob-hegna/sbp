@@ -15,6 +15,12 @@
 uint64_t BBlock::combined_h() {
     uint64_t addr = 0x0;
 
+    // if don't know at compile-time where the block branches to, we can't
+    // make a prediction
+    if(get_jmp() == FAIL_H) {
+        return FAIL_H;
+    }
+
     // this auto becomes std::function<uint64_t(void)> at compile-time, but
     // gcc won't allow uint64_t in the template parameters for whatever reason,
     // so for portability, we let the compiler determine the exact type at 

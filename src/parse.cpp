@@ -57,8 +57,8 @@ std::shared_ptr<Ins> parse_ins(std::string line) {
     return ins_ret;
 }
 
-std::map<uint64_t, BBlock> parse_file(std::string path) {
-    std::map<uint64_t, BBlock> super_set;
+std::vector<BBlock> parse_file(std::string path) {
+    std::vector<BBlock> super_set;
 
     std::ifstream file(path);
     std::vector<std::string> lines;
@@ -92,7 +92,7 @@ std::map<uint64_t, BBlock> parse_file(std::string path) {
             block.set_ins(ins);
             ins.clear();
 
-            super_set[block_tag] = block;
+            super_set.push_back(block);
 
             continue;
         }

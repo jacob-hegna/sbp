@@ -41,10 +41,10 @@ int main(int argc, char *argv[]) {
     
     path = std::string(argv[1]);
 
-    std::map<uint64_t, BBlock> super_set = parse_file(path);
+    std::vector<BBlock> super_set = parse_file(path);
 
     for(auto i : super_set) {
-        std::cout << std::hex << i.second.print_info() << std::endl;
+        std::cout << i.print_info() << std::endl;
     }
 
 /*
