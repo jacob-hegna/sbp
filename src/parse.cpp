@@ -57,8 +57,8 @@ std::shared_ptr<Ins> parse_ins(std::string line) {
     return ins_ret;
 }
 
-std::vector<BBlock> parse_file(std::string path) {
-    std::vector<BBlock> super_set;
+vector_shared<BBlock> parse_file(std::string path) {
+    vector_shared<BBlock> super_set;
 
     std::ifstream file(path);
     std::vector<std::string> lines;
@@ -69,15 +69,15 @@ std::vector<BBlock> parse_file(std::string path) {
 
     bool open_tag = false;
     uint64_t block_tag;
-    std::vector<std::shared_ptr<Ins>> ins;
+    vector_shared<Ins> ins;
 
     for(std::string line : lines) {
         // newline after every block signifies the end of the block
         // TODO: instead of newline checking, end the block definition
         // once a certain instruction is reached (JNZ, RET, etc)
-        if(line.length() == 0) {
+        if(line.length() == 0 && open_tag) {
             open_tag = false;
-            BBlock block(block_tag, ins.at(0)->get_loc());
+            std::shared_ptr<BBlock> block(new BBlock(block_tag, ins.at(0)->get_loc()));
 
             // check if the basic block branches statically or not
             if(ins.back()->get_ins_type() != InsType::JMP) {
@@ -89,7 +89,7 @@ std::vector<BBlock> parse_file(std::string path) {
             }
 
 
-            block.set_ins(ins);
+            block->set_ins(ins);
             ins.clear();
 
             super_set.push_back(block);

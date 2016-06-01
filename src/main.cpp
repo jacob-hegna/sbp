@@ -8,6 +8,7 @@
 
 #include "bblock.h"
 #include "parse.h"
+#include "graph.h"
 
 uint64_t predict_branch(uint64_t start) {
     BBlock block(0x0, start);
@@ -30,29 +31,16 @@ uint64_t predict_branch(uint64_t start) {
  * of the project
  */
 int main(int argc, char *argv[]) {
-    
     std::string path;
-
     if(argc < 2) {
         std::cout << "Usage: " << argv[0] << " [filename]" << std::endl
                 << "\tfilename - path to x86 binary file" << std::endl;
         return -1;
     }
-    
     path = std::string(argv[1]);
 
-    std::vector<BBlock> super_set = parse_file(path);
-
-    for(auto i : super_set) {
-        std::cout << i.print_info() << std::endl;
-    }
-
-/*
-    uint64_t start = 0x01; // initial block address
-    uint64_t end   = predict_branch(start);
-    std::cout << "0x" << std::hex << start << " --> 0x"
-              << std::hex << end << std::endl;
-*/
+    vector_shared<BBlock> super_set = parse_file(path);
+    Graph graph(super_set);
 
     return 0;
 }

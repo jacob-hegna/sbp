@@ -53,7 +53,7 @@ void BBlock::push_back(std::shared_ptr<Ins> i) {
     ins.push_back(i);
 }
 
-void BBlock::set_ins(std::vector<std::shared_ptr<Ins>> ins) {
+void BBlock::set_ins(vector_shared<Ins> ins) {
     this->ins = ins;
 }
 
@@ -65,6 +65,6 @@ uint64_t BBlock::get_tag() {
     return block_tag;
 }
 
-std::vector<std::shared_ptr<Ins>> BBlock::get_ins() {
+vector_shared<Ins> BBlock::get_ins() {
     return ins;
 }

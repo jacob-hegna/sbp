@@ -11,6 +11,8 @@
 #include "asm/ins.h"
 #include "asm/jmp.h"
 
+#include "types.h"
+
 class Graph;
 
 class BBlock {
@@ -37,20 +39,20 @@ public:
     uint64_t get_jmp();
 
     void push_back(std::shared_ptr<Ins>);
-    void set_ins(std::vector<std::shared_ptr<Ins>>);
+    void set_ins(vector_shared<Ins>);
 
     uint64_t get_loc();
     uint64_t get_tag();
-    std::vector<std::shared_ptr<Ins>> get_ins();
+    vector_shared<Ins> get_ins();
 private:
 	uint64_t block_addr;
     uint64_t block_tag;
 
-    std::vector<std::shared_ptr<Ins>> ins;
+    vector_shared<Ins> ins;
 
     // for the graph
-    BBlock *fall, *jmp;
-    BBlock *parent;
+    std::shared_ptr<BBlock> fall, jmp;
+    std::shared_ptr<BBlock> parent;
 
     // the below heuristics are defined in heuristics.cpp
 

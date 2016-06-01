@@ -3,24 +3,26 @@
 
 #include <stdint.h>
 #include <vector>
+#include <memory>
 
 #include "bblock.h"
+#include "types.h"
 
 class Graph {
 public:
     Graph();
-    ~Graph();
+    Graph(vector_shared<BBlock> super_set);
 
-    void insert(uint64_t addr);
-    BBlock* search(uint64_t addr);
-    void delete_tree();
+    void init(vector_shared<BBlock> super_set);
+
+    void insert(std::shared_ptr<BBlock> parent, std::shared_ptr<BBlock> child, bool jmp);
+    std::shared_ptr<BBlock> search(uint64_t tag);
 
 private:
-    BBlock *root;
+    std::shared_ptr<BBlock> root;
 
-    void insert(uint64_t addr, BBlock *parent, bool jmp);
-    BBlock* search(uint64_t addr, BBlock *leaf);
-    void delete_tree(BBlock *leaf);
+    void init(vector_shared<BBlock> super_set, std::shared_ptr<BBlock> leaf);
+    std::shared_ptr<BBlock> search(uint64_t tag, std::shared_ptr<BBlock> leaf);
 };
 
 #endif

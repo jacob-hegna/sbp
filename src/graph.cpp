@@ -4,54 +4,53 @@ Graph::Graph() {
     root = nullptr;
 }
 
-Graph::~Graph() {
-    delete_tree();
+Graph::Graph(vector_shared<BBlock> super_set) {
+    init(super_set);
 }
 
-void Graph::insert(uint64_t addr) {
-    BBlock *new_block = new BBlock(0x0, addr);
-
-    root = new_block;
+void Graph::init(vector_shared<BBlock> super_set) {
+    root = super_set.at(0);
+    init(super_set, root);
 }
 
-void Graph::insert(uint64_t addr, BBlock *parent, bool jmp) {
-    BBlock *new_block = new BBlock(0x0, addr);
-
-    if(jmp) {
-        parent->jmp = new_block;
-    } else {
-        parent->fall = new_block;
+void Graph::init(vector_shared<BBlock> super_set, std::shared_ptr<BBlock> leaf) {
+    for(std::shared_ptr<BBlock> block : super_set) {
+        if(block->get_loc() == leaf->get_fall()) {
+            this->insert(root, block, false);
+            this->init(super_set, block);
+        }
+        if(block->get_loc() == leaf->get_jmp()) {
+            this->insert(root, block, true);
+            this->init(super_set, block);
+        }
     }
 }
 
-BBlock* Graph::search(uint64_t addr) {
-    return search(addr, root);
+void Graph::insert(std::shared_ptr<BBlock> parent, std::shared_ptr<BBlock> child,
+                bool is_jmp) {
+    if(is_jmp) {
+        parent->jmp = child;
+    } else {
+        parent->fall = child;
+    }
 }
 
-BBlock* Graph::search(uint64_t addr, BBlock *leaf) {
+std::shared_ptr<BBlock> Graph::search(uint64_t tag) {
+    return search(tag, root);
+}
+
+std::shared_ptr<BBlock> Graph::search(uint64_t tag, std::shared_ptr<BBlock> leaf) {
     if(leaf != nullptr) {
-        if(leaf->get_loc() == addr) {
+        if(leaf->get_tag() == tag) {
             return leaf;
         } else {
-            BBlock *ret = nullptr;
-            if((ret = search(addr, leaf->fall)) != nullptr) {
+            std::shared_ptr<BBlock> ret = nullptr;
+            if((ret = search(tag, leaf->fall)) != nullptr) {
                 return ret;
-            } else if((ret = search(addr, leaf->jmp)) != nullptr) {
+            } else if((ret = search(tag, leaf->jmp)) != nullptr) {
                 return ret;
             }
         }
     }
     return nullptr;
-}
-
-void Graph::delete_tree() {
-    delete_tree(root);
-}
-
-void Graph::delete_tree(BBlock *leaf) {
-    if(leaf != nullptr) {
-        delete_tree(leaf->fall);
-        delete_tree(leaf->jmp);
-        delete leaf;
-    }
 }
