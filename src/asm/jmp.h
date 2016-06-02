@@ -5,6 +5,7 @@
 
 #include <array>
 #include <algorithm>
+#include <string>
 
 enum struct JmpType {
     JMP,  // Unconditional jmp

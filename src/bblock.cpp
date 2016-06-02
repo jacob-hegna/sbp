@@ -1,6 +1,5 @@
 #include "bblock.h"
 
-
 BBlock::BBlock() {
     fall   = nullptr;
     jmp    = nullptr;

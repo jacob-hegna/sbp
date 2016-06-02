@@ -1,5 +1,5 @@
-#ifndef __TYPES_H_
-#define __TYPES_H_
+#ifndef __TYPES_H_NOCONFLICT
+#define __TYPES_H_NOCONFLICT
 
 #include <vector>
 #include <memory>
