@@ -1,4 +1,5 @@
 #include "graph.h"
+#include <iostream>
 
 Graph::Graph() {
     root = nullptr;
@@ -14,13 +15,18 @@ void Graph::init(vector_shared<BBlock> super_set) {
 }
 
 void Graph::init(vector_shared<BBlock> super_set, std::shared_ptr<BBlock> leaf) {
+    
     for(std::shared_ptr<BBlock> block : super_set) {
         if(block->get_loc() == leaf->get_fall()) {
-            this->insert(root, block, false);
+            this->insert(leaf, block, false);
+            std::cout << std::hex << leaf->get_tag() << " has fall "
+                      << std::hex << block->get_tag() << std::endl;
             this->init(super_set, block);
         }
         if(block->get_loc() == leaf->get_jmp()) {
-            this->insert(root, block, true);
+            this->insert(leaf, block, true);
+            std::cout << std::hex << leaf->get_tag() << " has jmp "
+                      << std::hex << block->get_tag() << std::endl;
             this->init(super_set, block);
         }
     }

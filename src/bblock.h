@@ -32,6 +32,9 @@ public:
     // returns the last instruction in the block, presumably a Jmp
     std::shared_ptr<Jmp> get_last();
 
+    // returns true if the block has a static branch
+    bool static_jmp();
+
     // returns the address of the next fall-through block
     uint64_t get_fall();
 

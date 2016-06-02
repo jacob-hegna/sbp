@@ -32,6 +32,10 @@ std::shared_ptr<Jmp> BBlock::get_last() {
     return std::static_pointer_cast<Jmp>(ins.back());
 }
 
+bool BBlock::static_jmp() {
+    return get_last()->get_static();
+}
+
 uint64_t BBlock::get_fall() {
     if(get_last() != nullptr) {
         return this->get_last()->get_loc()
