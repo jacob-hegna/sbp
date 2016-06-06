@@ -26,7 +26,7 @@ std::shared_ptr<Jmp> parse_jmp(std::string jmp_str, std::string args) {
     return jmp_ret;
 }
 
-std::shared_ptr<Ins> parse_ins(std::string line) {
+std::shared_ptr<Ins> parse_ins(std::string line, std::vector<uint64_t> &calls) {
     std::shared_ptr<Ins> ins_ret(new Ins());
 
     std::string ins_str = line.substr(43, 7);
@@ -57,11 +57,16 @@ std::shared_ptr<Ins> parse_ins(std::string line) {
     // set the location of the instruction
     std::string loc = line.substr(2, 18);
     ins_ret->set_loc(s_to_uint64(loc));
+
+    if(ins_ret->get_ins_type() == InsType::CALL) {
+        calls.push_back(ins_ret->get_loc());
+    }
+
     return ins_ret;
 }
 
-vector_shared<BBlock> parse_file(std::string path) {
-    vector_shared<BBlock> super_set;
+BlockFile parse_file(std::string path) {
+    BlockFile block_file;
     
     std::ifstream file(path);
     std::vector<std::string> lines;
@@ -88,7 +93,7 @@ vector_shared<BBlock> parse_file(std::string path) {
 
         // if the line begines with a space, it details an instruction (usually)
         if(line.at(0) == ' ' && line.length() > 44) {
-            std::shared_ptr<Ins> current_ins = parse_ins(line);
+            std::shared_ptr<Ins> current_ins = parse_ins(line, block_file.calls);
             ins.push_back(current_ins);
             last_ins_type = current_ins->get_ins_type();
         }
@@ -121,12 +126,12 @@ vector_shared<BBlock> parse_file(std::string path) {
             block->set_ins(ins);
             ins.clear();
 
-            super_set.push_back(block);
+            block_file.blocks.push_back(block);
 
             block_tag = 0xFFFFFFFFFFFFFFFF;
             last_ins_type = InsType::INS;
         }
     }
 
-    return super_set;
+    return block_file;
 }

@@ -1,11 +1,7 @@
 #include <iostream>
 #include <string>
-#include <vector>
-#include <memory>
 
-#include "asm/ins.h"
-#include "asm/jmp.h"
-
+#include "vector_shared.h"
 #include "bblock.h"
 #include "parse.h"
 #include "graph.h"
@@ -19,7 +15,9 @@ int main(int argc, char *argv[]) {
     }
     path = std::string(argv[1]);
 
-    vector_shared<BBlock> super_set = parse_file(path);
+    BlockFile block_file = parse_file(path);
+
+    std::vector<Graph> graphs = make_graphs(block_file.blocks, block_file.calls);
 
     return 0;
 }

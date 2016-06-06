@@ -12,10 +12,11 @@
 #include "bblock.h"
 #include "vector_shared.h"
 
-std::shared_ptr<Jmp> parse_jmp(std::string jmp_str);
+struct BlockFile {
+    vector_shared<BBlock> blocks;
+    std::vector<uint64_t> calls;
+};
 
-std::shared_ptr<Ins> parse_ins(std::string ins_str);
-
-vector_shared<BBlock> parse_file(std::string path);
+BlockFile parse_file(std::string path);
 
 #endif
