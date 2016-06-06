@@ -25,7 +25,6 @@ uint64_t predict_branch(uint64_t start) {
     return block.next();
 }
 
-
 /*
  * main is full of test code rn and will not match the main in the final version
  * of the project
@@ -40,7 +39,11 @@ int main(int argc, char *argv[]) {
     path = std::string(argv[1]);
 
     vector_shared<BBlock> super_set = parse_file(path);
-    Graph graph(super_set);
+    //Graph graph(super_set);
+
+    for(std::shared_ptr<BBlock> block : super_set) {
+        std::cout << block->print_info() << block->print_ins() << std::endl;
+    }
 
     return 0;
 }

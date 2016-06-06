@@ -38,6 +38,10 @@ std::shared_ptr<Ins> parse_ins(std::string line) {
     // check if the instruction is a jmp and parse it separately
     if(ins_str.at(0) == 'j') {
         ins_ret = parse_jmp(ins_str, line.substr(50));
+    } else if(ins_str == "call") {
+        ins_ret->set_type(InsType::CALL);
+    } else if(ins_str == "ret") {
+        ins_ret->set_type(InsType::RET);
     }
 
 
@@ -53,30 +57,55 @@ std::shared_ptr<Ins> parse_ins(std::string line) {
     // set the location of the instruction
     std::string loc = line.substr(2, 18);
     ins_ret->set_loc(s_to_uint64(loc));
-
     return ins_ret;
 }
 
 vector_shared<BBlock> parse_file(std::string path) {
     vector_shared<BBlock> super_set;
-
+    
     std::ifstream file(path);
     std::vector<std::string> lines;
 
     for(std::string line; getline(file, line);) {
         lines.push_back(line);
     }
+    file.close();
 
-    bool open_tag = false;
-    uint64_t block_tag;
+    uint64_t block_tag = 0xFFFFFFFFFFFFFFFF;
     vector_shared<Ins> ins;
+    InsType last_ins_type = InsType::INS;
 
     for(std::string line : lines) {
-        // newline after every block signifies the end of the block
-        // TODO: instead of newline checking, end the block definition
-        // once a certain instruction is reached (JNZ, RET, etc)
-        if(line.length() == 0 && open_tag) {
-            open_tag = false;
+        if(line.length() == 0) continue;
+
+        // the only lines without a space in the first column are "Block #:" and
+        // the block tags
+        if(line.at(0) != ' ') {
+            if(line.substr(0,5) != "Block") {
+                block_tag = s_to_uint64(line);
+            }
+        }
+
+        // if the line begines with a space, it details an instruction (usually)
+        if(line.at(0) == ' ' && line.length() > 44) {
+            std::shared_ptr<Ins> current_ins = parse_ins(line);
+            ins.push_back(current_ins);
+            last_ins_type = current_ins->get_ins_type();
+        }
+
+        if(last_ins_type != InsType::INS ) {
+            if(last_ins_type == InsType::JMP) {
+                if(std::static_pointer_cast<Jmp>(ins.back())->get_jmp_type()
+                    == JmpType::JMP) {
+                    last_ins_type = InsType::INS;
+                    continue;
+                }
+            }
+
+            if(block_tag == 0xFFFFFFFFFFFFFFFF) {
+                block_tag = ins.at(0)->get_loc();
+            }
+
             std::shared_ptr<BBlock> block(new BBlock(block_tag, ins.at(0)->get_loc()));
 
             // check if the basic block branches statically or not
@@ -94,26 +123,10 @@ vector_shared<BBlock> parse_file(std::string path) {
 
             super_set.push_back(block);
 
-            continue;
-        }
-
-        // the only lines without a space in the first column are "Block #:" and
-        // the block tags
-        if(line.at(0) != ' ') {
-            if(line.substr(0,5) != "Block") {
-                open_tag = true;
-                block_tag = s_to_uint64(line);
-            }
-        }
-
-        // if the line begines with a space, it details an instruction (usually)
-        if(line.at(0) == ' ' && line.length() > 44) {
-            std::shared_ptr<Ins> current_ins = parse_ins(line);
-            ins.push_back(current_ins);
+            block_tag = 0xFFFFFFFFFFFFFFFF;
+            last_ins_type = InsType::INS;
         }
     }
-
-    file.close();
 
     return super_set;
 }

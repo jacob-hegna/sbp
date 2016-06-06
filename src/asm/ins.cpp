@@ -1,7 +1,7 @@
 #include "ins.h"
 
 Ins::Ins() {
-
+    ins_type = InsType::INS;
 }
 Ins::Ins(uint64_t loc, uint8_t size, InsType ins_type) {
     init(loc, size, ins_type);

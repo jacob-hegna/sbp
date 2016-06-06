@@ -23,6 +23,26 @@ std::string BBlock::print_info() {
     return ss.str();
 }
 
+std::string BBlock::print_ins() {
+    std::stringstream ss;
+    for(std::shared_ptr<Ins> i : ins) {
+        InsType type = i->get_ins_type();
+        if(type == InsType::INS) {
+            ss << std::hex << i->get_loc() << std::flush << "\tINS" << std::endl;
+        } else if(type == InsType::JMP) {
+            std::shared_ptr<Jmp> j = std::static_pointer_cast<Jmp>(i);
+            std::string jmp_type = Jmp::jmp_to_str(j->get_jmp_type());
+            ss << std::hex << i->get_loc() << std::flush << "\t" << jmp_type
+               << std::endl;
+        } else if(type == InsType::CALL) {
+            ss << std::hex << i->get_loc() << std::flush << "\tCALL" << std::endl;
+        } else if(type == InsType::RET) {
+            ss << std::hex << i->get_loc() << std::flush << "\tRET" << std::endl;
+        }
+    }
+    return ss.str();
+}
+
 uint64_t BBlock::next() {
     return this->combined_h();
 }

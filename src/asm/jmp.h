@@ -54,6 +54,8 @@ public:
     bool is_loop();
 
     static JmpType str_to_jmp(std::string jmp_str);
+    static std::string jmp_to_str(JmpType jmp_type);
+    static std::array<std::string, 33> get_jmp_strings();
 
     void set_static(bool static_jmp);
 

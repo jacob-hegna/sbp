@@ -11,7 +11,7 @@
 #include "asm/ins.h"
 #include "asm/jmp.h"
 
-#include "types.h"
+#include "vector_shared.h"
 
 class Graph;
 
@@ -25,6 +25,7 @@ public:
 
     // returns human-readable information about the basic block
     std::string print_info();
+    std::string print_ins();
 
     // returns the address the block is predicted to branch to
     uint64_t next();

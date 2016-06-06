@@ -10,7 +10,7 @@
 #include "asm/jmp.h"
 
 #include "bblock.h"
-#include "types.h"
+#include "vector_shared.h"
 
 std::shared_ptr<Jmp> parse_jmp(std::string jmp_str);
 

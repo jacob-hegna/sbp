@@ -6,7 +6,7 @@
 #include <memory>
 
 #include "bblock.h"
-#include "types.h"
+#include "vector_shared.h"
 
 class Graph {
 public:

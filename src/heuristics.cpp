@@ -28,9 +28,9 @@ uint64_t BBlock::combined_h() {
     auto heuristics = {
         &BBlock::loop_h,
         &BBlock::opcode_h,
-        &BBlock::call_s_h,
-        &BBlock::return_s_h,
-        &BBlock::rand_h
+        //&BBlock::call_s_h,
+        //&BBlock::return_s_h,
+        //&BBlock::rand_h
     };
 
     // iterate through each heuristic, if any of them don't return the

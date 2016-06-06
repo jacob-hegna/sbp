@@ -52,6 +52,15 @@ JmpType Jmp::str_to_jmp(std::string jmp_str) {
     return ret;
 }
 
+std::string Jmp::jmp_to_str(JmpType jmp_type) {
+    std::string ret;
+    for(int i = 0; i < 34; ++i) {
+        ret = jmp_strings[i];
+        if(jmp_type == static_cast<JmpType>(i)) break;
+    }
+    return ret;
+}
+
 Jmp::Jmp() {
     this->jmp_type   = JmpType::JMP;
     this->ins_type   = InsType::JMP;
@@ -77,6 +86,7 @@ bool Jmp::is_loop() {
 
 void Jmp::set_static(bool static_jmp) {
     this->static_jmp = static_jmp;
+    if(static_jmp == false) this->to = 0xFFFFFFFFFFFFFFFF;
 }
 
 uint64_t Jmp::get_to() {
@@ -87,4 +97,7 @@ JmpType Jmp::get_jmp_type() {
 }
 bool Jmp::get_static() {
     return static_jmp;
+}
+std::array<std::string, 33> Jmp::get_jmp_strings() {
+    return jmp_strings;
 }
