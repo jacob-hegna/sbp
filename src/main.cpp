@@ -10,10 +10,6 @@
 #include "parse.h"
 #include "graph.h"
 
-/*
- * main is full of test code rn and will not match the main in the final version
- * of the project
- */
 int main(int argc, char *argv[]) {
     std::string path;
     if(argc < 2) {

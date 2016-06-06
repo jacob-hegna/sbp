@@ -30,5 +30,8 @@ $(TARGET): $(foreach file, $(OFILES), $(BUILDDIR)$(file))
 $(BUILDDIR)%.cpp.o: %.cpp
 	$(CC) $(foreach def, $(DEFINES), -D $(def)) $(CCFLAGS) $< -o $@
 
+$(BUILDDIR):
+	mkdir $@
+
 clean:
 	rm $(BUILDDIR)*
