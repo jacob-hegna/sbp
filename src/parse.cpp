@@ -40,6 +40,12 @@ std::shared_ptr<Ins> parse_ins(std::string line, std::vector<uint64_t> &calls) {
         ins_ret = parse_jmp(ins_str, line.substr(50));
     } else if(ins_str == "call") {
         ins_ret->set_type(InsType::CALL);
+        uint64_t addr = 0xFFFFFFFFFFFFFFFF;
+        if(line.at(50) == '$') {
+            addr = s_to_uint64(line.substr(51, 68));
+        }
+        ins_ret->set_data(addr);
+        calls.push_back(addr);
     } else if(ins_str == "ret") {
         ins_ret->set_type(InsType::RET);
     }
@@ -57,10 +63,6 @@ std::shared_ptr<Ins> parse_ins(std::string line, std::vector<uint64_t> &calls) {
     // set the location of the instruction
     std::string loc = line.substr(2, 18);
     ins_ret->set_loc(s_to_uint64(loc));
-
-    if(ins_ret->get_ins_type() == InsType::CALL) {
-        calls.push_back(ins_ret->get_loc());
-    }
 
     return ins_ret;
 }

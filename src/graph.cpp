@@ -1,21 +1,29 @@
 #include "graph.h"
 
+/*
+ * TO FIX
+ *  - calls to dynamic addresses
+ *  - ending on the correct RET
+ */
+
 std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
                                std::vector<uint64_t> calls) {
     std::vector<Graph> graphs;
     std::vector<uint64_t> finished_calls;
 
-    while(!calls.empty()) {
-        for(uint i = 0; i < calls.size(); ++i) {
-            if(Graph::good_call(super_set, calls.at(i), finished_calls)) {
-                graphs.push_back(Graph(super_set, calls.at(i)));
+    int a = 0;
+    while(finished_calls.size() != calls.size()) {
+        for(uint64_t call : calls) {
+            if(std::find(finished_calls.begin(), finished_calls.end(), call)
+                != finished_calls.end()) continue;
+            if(Graph::good_call(super_set, call, finished_calls)) {
+                graphs.push_back(Graph(super_set, call));
 
-                // move the call from the regular vector to the finished vector
-                finished_calls.push_back(calls.at(i));
-                calls.erase(calls.begin() + i);
-                break;
+                // add the call from the regular vector to the finished vector
+                finished_calls.push_back(call);
             }
         }
+        if(a++ > 1000) break;
     }
 
     return graphs;
@@ -34,9 +42,13 @@ bool Graph::good_call(vector_shared<BBlock> super_set, uint64_t addr,
     // creates the desired output
     if(block == nullptr) return true;
 
+    // record how many calls are made inside the relevant call
+    static int depth = 0;
+
     // if the call block has another call inside of it, it's "bad"
     for(std::shared_ptr<Ins> ins : block->get_ins()) {
         if(ins->get_ins_type() == InsType::CALL) {
+            ++depth;
             bool finished = false;
             // ...unless that call and all sub-calls have already been accounted
             // for
@@ -53,12 +65,15 @@ bool Graph::good_call(vector_shared<BBlock> super_set, uint64_t addr,
     vector_shared<Ins> ins = block->get_ins();
     if(ins.size() >= 2) {
         if(ins[ins.size()-2]->get_ins_type() == InsType::RET) {
-            return true;
+            if(depth == 0) {
+                return true;
+            }
+            --depth;
         }
     }
 
-    return good_call(super_set, block->get_jmp()) &&
-           good_call(super_set, block->get_fall());
+    return good_call(super_set, block->get_jmp(), finished_calls);
+           good_call(super_set, block->get_fall(), finished_calls);
 }
 
 Graph::Graph() {

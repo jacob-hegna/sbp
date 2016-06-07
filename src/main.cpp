@@ -19,5 +19,7 @@ int main(int argc, char *argv[]) {
 
     std::vector<Graph> graphs = make_graphs(block_file.blocks, block_file.calls);
 
+    std::cout << block_file.calls.size() << " : " << graphs.size() << std::endl;
+
     return 0;
 }
