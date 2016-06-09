@@ -19,15 +19,19 @@ public:
     static bool good_call(vector_shared<BBlock> super_set, uint64_t addr,
         const std::vector<uint64_t> finished_calls = std::vector<uint64_t>());
 
-    void init(vector_shared<BBlock> super_set, uint64_t leaf);
+    void init(vector_shared<BBlock> super_set, uint64_t addr);
 
     void insert(std::shared_ptr<BBlock> parent, std::shared_ptr<BBlock> child, bool jmp);
-    std::shared_ptr<BBlock> search(uint64_t tag);
+    std::shared_ptr<BBlock> search(uint64_t addr);
+
+    std::shared_ptr<BBlock> get_root();
 
 private:
     std::shared_ptr<BBlock> root;
+    vector_shared<BBlock> super_set;
 
-    std::shared_ptr<BBlock> search(uint64_t tag, std::shared_ptr<BBlock> leaf);
+    void init(std::shared_ptr<BBlock> leaf);
+    std::shared_ptr<BBlock> search(uint64_t addr, std::shared_ptr<BBlock> leaf);
 };
 
 #endif

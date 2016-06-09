@@ -118,12 +118,20 @@ BlockFile parse_file(std::string path) {
             // check if the basic block branches statically or not
             if(ins.back()->get_ins_type() != InsType::JMP) {
                 std::shared_ptr<Jmp> last_jmp(new Jmp());
-                last_jmp->set_static(false);
+                if(ins.back()->get_ins_type() == InsType::CALL) {
+                    if(ins.back()->get_data() != 0xFFFFFFFFFFFFFFFF) {
+                        last_jmp->set_static(true);
+                        last_jmp->set_to(ins.back()->get_data());
+                    } else {
+                        last_jmp->set_static(false);
+                    }
+                } else {
+                    last_jmp->set_static(false);
+                }
                 last_jmp->set_loc(ins.back()->get_loc());
                 last_jmp->set_size(ins.back()->get_size());
                 ins.push_back(last_jmp);
             }
-
 
             block->set_ins(ins);
             ins.clear();

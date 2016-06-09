@@ -58,6 +58,7 @@ public:
     static std::array<std::string, 33> get_jmp_strings();
 
     void set_static(bool static_jmp);
+    void set_to(uint64_t to);
 
     uint64_t get_to();
     JmpType get_jmp_type();

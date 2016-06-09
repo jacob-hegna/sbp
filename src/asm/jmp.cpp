@@ -89,6 +89,10 @@ void Jmp::set_static(bool static_jmp) {
     if(static_jmp == false) this->to = 0xFFFFFFFFFFFFFFFF;
 }
 
+void Jmp::set_to(uint64_t to) {
+    this->to = to;
+}
+
 uint64_t Jmp::get_to() {
     return (static_jmp) ? this->to : 0xFFFFFFFFFFFFFFFF;
 }

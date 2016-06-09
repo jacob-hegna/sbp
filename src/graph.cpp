@@ -1,11 +1,5 @@
 #include "graph.h"
 
-/*
- * TO FIX
- *  - calls to dynamic addresses
- *  - ending on the correct RET
- */
-
 std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
                                std::vector<uint64_t> calls) {
     std::vector<Graph> graphs;
@@ -17,24 +11,39 @@ std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
             if(std::find(finished_calls.begin(), finished_calls.end(), call)
                 != finished_calls.end()) continue;
             if(Graph::good_call(super_set, call, finished_calls)) {
-                graphs.push_back(Graph(super_set, call));
+                Graph graph(super_set, call);
+                if(graph.get_root() != nullptr)
+                    graphs.push_back(graph);
 
                 // add the call from the regular vector to the finished vector
                 finished_calls.push_back(call);
             }
         }
-        if(a++ > 1000) break;
+        if(a++ > 1000) break; // because we are not testing full files, we will
+                              // never finish every call
     }
 
     return graphs;
 }
 
+/*
+ * determines whether a call contains any other calls nested within it
+ * it ignore nested calls that are in the finished_calls vector
+ */
 bool Graph::good_call(vector_shared<BBlock> super_set, uint64_t addr,
                       const std::vector<uint64_t> finished_calls) {
+    static std::vector<uint64_t> parsed_blocks;
+    if(std::find(parsed_blocks.begin(), parsed_blocks.end(), addr) != parsed_blocks.end()) {
+        return true;
+    }
+    parsed_blocks.push_back(addr);
+
     std::shared_ptr<BBlock> block = nullptr;
     for(std::shared_ptr<BBlock> i : super_set) {
-        block = i;
-        if(block->get_loc() == addr) break;
+        if(i->get_loc() == addr) {
+            block = i;
+            break;
+        }
     }
 
     // we return true, because even though we cannot find a block matching the
@@ -64,7 +73,8 @@ bool Graph::good_call(vector_shared<BBlock> super_set, uint64_t addr,
 
     vector_shared<Ins> ins = block->get_ins();
     if(ins.size() >= 2) {
-        if(ins[ins.size()-2]->get_ins_type() == InsType::RET) {
+        if((ins.end()[-2])->get_ins_type() == InsType::RET) {
+
             if(depth == 0) {
                 return true;
             }
@@ -72,8 +82,10 @@ bool Graph::good_call(vector_shared<BBlock> super_set, uint64_t addr,
         }
     }
 
-    return good_call(super_set, block->get_jmp(), finished_calls);
-           good_call(super_set, block->get_fall(), finished_calls);
+    bool good_jmp  = good_call(super_set, block->get_jmp(), finished_calls);
+    bool good_fall = good_call(super_set, block->get_fall(), finished_calls);
+
+    return good_jmp && good_fall;
 }
 
 Graph::Graph() {
@@ -81,11 +93,51 @@ Graph::Graph() {
 }
 
 Graph::Graph(vector_shared<BBlock> super_set, uint64_t addr) {
+    root = nullptr;
     init(super_set, addr);
 }
 
+/*
+ * root initialization function
+ * calls the recursive init()
+ * public
+ */
 void Graph::init(vector_shared<BBlock> super_set, uint64_t leaf) {
-    
+    this->super_set = super_set;
+
+    for(std::shared_ptr<BBlock> block : super_set) {
+        if(block->get_loc() == leaf) root = block;
+    }
+
+    init(root);
+}
+
+/*
+ * recursive initialization function
+ * finds the stems of the tree
+ * private
+ */
+void Graph::init(std::shared_ptr<BBlock> leaf) {
+    // located the jmp and fall blocks associated with the leaf block
+    if(leaf == nullptr) return;
+
+    int both = 0; // if we've found both the jmp and the call, we can break;
+    for(std::shared_ptr<BBlock> block : super_set) {
+        if(block->get_loc() == leaf->get_fall()) {
+            leaf->fall = block;
+            init(block);
+            both += 1;
+        }
+
+        if(block->get_loc() == leaf->get_jmp()) {
+            if(block->get_loc() == block->get_jmp()) continue; // self loop guard
+            leaf->jmp = block;
+            init(block);
+            both += 1;
+        }
+
+        if(both == 2) break;
+    }
 }
 
 void Graph::insert(std::shared_ptr<BBlock> parent, std::shared_ptr<BBlock> child,
@@ -97,22 +149,26 @@ void Graph::insert(std::shared_ptr<BBlock> parent, std::shared_ptr<BBlock> child
     }
 }
 
-std::shared_ptr<BBlock> Graph::search(uint64_t tag) {
-    return search(tag, root);
+std::shared_ptr<BBlock> Graph::search(uint64_t addr) {
+    return search(addr, root);
 }
 
-std::shared_ptr<BBlock> Graph::search(uint64_t tag, std::shared_ptr<BBlock> leaf) {
+std::shared_ptr<BBlock> Graph::search(uint64_t addr, std::shared_ptr<BBlock> leaf) {
     if(leaf != nullptr) {
-        if(leaf->get_tag() == tag) {
+        if(leaf->get_loc() == addr) {
             return leaf;
         } else {
             std::shared_ptr<BBlock> ret = nullptr;
-            if((ret = search(tag, leaf->fall)) != nullptr) {
+            if((ret = search(addr, leaf->fall)) != nullptr) {
                 return ret;
-            } else if((ret = search(tag, leaf->jmp)) != nullptr) {
+            } else if((ret = search(addr, leaf->jmp)) != nullptr) {
                 return ret;
             }
         }
     }
     return nullptr;
+}
+
+std::shared_ptr<BBlock> Graph::get_root() {
+    return root;
 }
