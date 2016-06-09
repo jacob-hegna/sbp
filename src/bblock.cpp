@@ -17,6 +17,7 @@ void BBlock::init(uint64_t block_tag, uint64_t block_addr) {
 std::string BBlock::print_info() {
     std::stringstream ss;
     ss << "tag:\t" << std::hex << this->get_tag()  << std::endl
+    << "addr\t"    << std::hex << this->get_loc()  << std::endl
     << "jmp:\t"    << std::hex << this->get_jmp()  << std::endl
     << "fall:\t"   << std::hex << this->get_fall() << std::endl;
 

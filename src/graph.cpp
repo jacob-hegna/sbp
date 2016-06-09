@@ -19,7 +19,7 @@ std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
                 finished_calls.push_back(call);
             }
         }
-        if(a++ > 1000) break; // because we are not testing full files, we will
+        if(a++ > 10000) break; // because we are not testing full files, we will
                               // never finish every call
     }
 
@@ -76,6 +76,7 @@ bool Graph::good_call(vector_shared<BBlock> super_set, uint64_t addr,
         if((ins.end()[-2])->get_ins_type() == InsType::RET) {
 
             if(depth == 0) {
+                parsed_blocks.clear();
                 return true;
             }
             --depth;
@@ -118,25 +119,22 @@ void Graph::init(vector_shared<BBlock> super_set, uint64_t leaf) {
  * private
  */
 void Graph::init(std::shared_ptr<BBlock> leaf) {
-    // located the jmp and fall blocks associated with the leaf block
     if(leaf == nullptr) return;
 
-    int both = 0; // if we've found both the jmp and the call, we can break;
     for(std::shared_ptr<BBlock> block : super_set) {
         if(block->get_loc() == leaf->get_fall()) {
-            leaf->fall = block;
-            init(block);
-            both += 1;
+            if(search(block->get_loc()) == nullptr) {
+                leaf->fall = block;
+                init(block);
+            }
         }
 
         if(block->get_loc() == leaf->get_jmp()) {
-            if(block->get_loc() == block->get_jmp()) continue; // self loop guard
-            leaf->jmp = block;
-            init(block);
-            both += 1;
+            if(search(block->get_loc()) == nullptr) {
+                leaf->jmp = block;
+                init(block);
+            }
         }
-
-        if(both == 2) break;
     }
 }
 
@@ -154,19 +152,42 @@ std::shared_ptr<BBlock> Graph::search(uint64_t addr) {
 }
 
 std::shared_ptr<BBlock> Graph::search(uint64_t addr, std::shared_ptr<BBlock> leaf) {
+    static vector_shared<BBlock> searched_nodes; // prevents infinite recursion
+    if(std::find(searched_nodes.begin(), searched_nodes.end(), leaf)
+         != searched_nodes.end()) {
+        return nullptr;
+    } else {
+        searched_nodes.push_back(leaf);
+    }
     if(leaf != nullptr) {
         if(leaf->get_loc() == addr) {
+            searched_nodes.clear();
             return leaf;
         } else {
             std::shared_ptr<BBlock> ret = nullptr;
             if((ret = search(addr, leaf->fall)) != nullptr) {
+                searched_nodes.clear();
                 return ret;
             } else if((ret = search(addr, leaf->jmp)) != nullptr) {
+                searched_nodes.clear();
                 return ret;
             }
         }
     }
+    searched_nodes.clear();
     return nullptr;
+}
+
+std::string Graph::print_info(std::shared_ptr<BBlock> leaf) {
+    std::stringstream ss;
+
+    if(leaf == nullptr) leaf = root;
+    ss << leaf->print_info() << std::endl;
+
+    if(leaf->jmp != nullptr)  ss << print_info(leaf->jmp);
+    if(leaf->fall != nullptr) ss << print_info(leaf->fall);
+
+    return ss.str();
 }
 
 std::shared_ptr<BBlock> Graph::get_root() {

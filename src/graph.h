@@ -24,6 +24,8 @@ public:
     void insert(std::shared_ptr<BBlock> parent, std::shared_ptr<BBlock> child, bool jmp);
     std::shared_ptr<BBlock> search(uint64_t addr);
 
+    std::string print_info(std::shared_ptr<BBlock> leaf = nullptr);
+
     std::shared_ptr<BBlock> get_root();
 
 private:
@@ -32,6 +34,7 @@ private:
 
     void init(std::shared_ptr<BBlock> leaf);
     std::shared_ptr<BBlock> search(uint64_t addr, std::shared_ptr<BBlock> leaf);
+
 };
 
 #endif
