@@ -21,16 +21,20 @@ uint64_t BBlock::combined_h() {
         return FAIL_H;
     }
 
+    if(ins.end()[-2]->get_ins_type() == InsType::CALL) {
+        return FAIL_H;
+    }
+
     // this auto becomes std::function<uint64_t(void)> at compile-time, but
     // gcc won't allow uint64_t in the template parameters for whatever reason,
     // so for portability, we let the compiler determine the exact type at 
     // compile-time
     auto heuristics = {
-        &BBlock::loop_h,
-        &BBlock::opcode_h,
+        //&BBlock::loop_h,
+        //&BBlock::opcode_h,
         //&BBlock::call_s_h,
         //&BBlock::return_s_h,
-        //&BBlock::rand_h
+        &BBlock::rand_h
     };
 
     // iterate through each heuristic, if any of them don't return the
@@ -38,6 +42,15 @@ uint64_t BBlock::combined_h() {
     // Otherwise, it will default to the rand_h heuristic
     for(auto heuristic : heuristics) {
         if((addr = (this->*heuristic)()) != FAIL_H) break;
+    }
+
+    prediction = addr;
+
+    bool swap = false;
+    if(swap && addr == get_jmp()) {
+        addr = get_fall();
+    } else if(swap && addr == get_fall()) {
+        addr = get_jmp();
     }
 
     return addr;
@@ -77,12 +90,13 @@ uint64_t BBlock::opcode_h() {
     // many functions return 0 or greater to indicate success, so we predict
     // these branches will be taken
     std::vector<JmpType> jmp_zero_or_greater = {
-        JmpType::JZ,
-        JmpType::JNB,
-        JmpType::JA,
-        JmpType::JGE,
-        JmpType::JNL,
-        JmpType::JG 
+        //JmpType::JZ,
+        //JmpType::JNB,
+        //JmpType::JA,
+        //JmpType::JGE,
+        //JmpType::JNL,
+        //JmpType::JG,
+        //JmpType::JLE
     };
     if(jmp_matches(jmp_zero_or_greater, exit->get_jmp_type())) {
         return this->get_jmp();
@@ -92,11 +106,15 @@ uint64_t BBlock::opcode_h() {
     // branch will fall-through as we should expect many of those to be error
     // codes
     std::vector<JmpType> jmp_negative = {
+        JmpType::JZ,
+        JmpType::JNL,
+        JmpType::JLE,
         JmpType::JNZ,
         JmpType::JB,
-        JmpType::JNAE,
-        JmpType::JL,
-        JmpType::JNGE
+
+        //JmpType::JNAE,
+        //JmpType::JL,
+        //JmpType::JNGE
     };
     if(jmp_matches(jmp_negative, exit->get_jmp_type())) {
         return this->get_fall();
@@ -110,19 +128,10 @@ uint64_t BBlock::opcode_h() {
  * the call. if each has a call, return FAIL_H
  */
 uint64_t BBlock::call_s_h() {
-    BBlock next_fall(0x0, this->get_fall());
-    BBlock next_jmp(0x0, this->get_jmp());
-
-    // <test code>
-    std::shared_ptr<Ins> ins_fall(new Ins(this->get_fall(), 2, InsType::INS));
-    std::shared_ptr<Ins> ins_jmp(new Ins(this->get_jmp(), 2, InsType::INS));
-
-    next_fall.push_back(ins_fall);
-    next_jmp.push_back(ins_jmp);
-    // </test code>
+    if(fall == nullptr || jmp == nullptr) return FAIL_H;
 
     bool next_fall_call = false;
-    for(std::shared_ptr<Ins> i : next_fall.get_ins()) {
+    for(std::shared_ptr<Ins> i : fall->get_ins()) {
         if(i->get_ins_type() == InsType::CALL) {
             next_fall_call = true;
             break;
@@ -130,7 +139,7 @@ uint64_t BBlock::call_s_h() {
     }
 
     bool next_jmp_call = false;
-    for(std::shared_ptr<Ins> i : next_jmp.get_ins()) {
+    for(std::shared_ptr<Ins> i : jmp->get_ins()) {
         if(i->get_ins_type() == InsType::CALL) {
             next_jmp_call = true;
             break;
@@ -140,9 +149,9 @@ uint64_t BBlock::call_s_h() {
     if(next_fall_call && next_jmp_call) { // guards against the dual case
         return FAIL_H;
     } else if(next_fall_call) {           // note the returns are the converse
-        return next_jmp.get_loc();        // of what would normally be expected
+        return jmp->get_loc();            // of what would normally be expected
     } else if(next_jmp_call) {
-        return next_fall.get_loc();
+        return fall->get_loc();
     }
     return FAIL_H;
 }
@@ -152,19 +161,10 @@ uint64_t BBlock::call_s_h() {
  * WITHOUT the return. if each has a return, return FAIL_H
  */
 uint64_t BBlock::return_s_h() {
-    BBlock next_fall(0x0, this->get_fall());
-    BBlock next_jmp(0x0, this->get_jmp());
-
-    // <test code>
-    std::shared_ptr<Ins> ins_fall(new Ins(this->get_fall(), 2, InsType::INS));
-    std::shared_ptr<Ins> ins_jmp(new Ins(this->get_jmp(), 2, InsType::INS));
-
-    next_fall.push_back(ins_fall);
-    next_jmp.push_back(ins_jmp);
-    // </test code>
+    if(fall == nullptr || jmp == nullptr) return FAIL_H;
 
     bool next_fall_ret = false;
-    for(std::shared_ptr<Ins> i : next_fall.get_ins()) {
+    for(std::shared_ptr<Ins> i : fall->get_ins()) {
         if(i->get_ins_type() == InsType::RET) {
             next_fall_ret = true;
             break;
@@ -172,7 +172,7 @@ uint64_t BBlock::return_s_h() {
     }
 
     bool next_jmp_ret = false;
-    for(std::shared_ptr<Ins> i : next_jmp.get_ins()) {
+    for(std::shared_ptr<Ins> i : jmp->get_ins()) {
         if(i->get_ins_type() == InsType::RET) {
             next_jmp_ret = true;
             break;
@@ -182,9 +182,9 @@ uint64_t BBlock::return_s_h() {
     if(next_fall_ret && next_jmp_ret) { // guards against the dual case
         return FAIL_H;
     } else if(next_fall_ret) {          // note the returns are the converse
-        return next_jmp.get_loc();      // of what would normally be expected
+        return jmp->get_loc();          // of what would normally be expected
     } else if(next_jmp_ret) {
-        return next_fall.get_loc();
+        return fall->get_loc();
     }
     return FAIL_H;
 

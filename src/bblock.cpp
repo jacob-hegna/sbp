@@ -1,9 +1,10 @@
 #include "bblock.h"
 
 BBlock::BBlock() {
-    fall   = nullptr;
-    jmp    = nullptr;
-    parent = nullptr;
+    fall       = nullptr;
+    jmp        = nullptr;
+    parent     = nullptr;
+    prediction = 0xFFFFFFFFFFFFFFFF;
 }
 BBlock::BBlock(uint64_t block_tag, uint64_t block_addr) : BBlock() {
     init(block_tag, block_addr);
@@ -44,8 +45,14 @@ std::string BBlock::print_ins() {
     return ss.str();
 }
 
-uint64_t BBlock::next() {
-    return this->combined_h();
+uint64_t BBlock::predict() {
+    uint64_t ret;
+    if(prediction == 0xFFFFFFFFFFFFFFFF) {
+        ret = this->combined_h();
+    } else {
+        ret = prediction;
+    }
+    return ret;
 }
 
 std::shared_ptr<Jmp> BBlock::get_last() {

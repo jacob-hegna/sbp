@@ -20,7 +20,7 @@ std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
             }
         }
         if(a++ > 10000) break; // because we are not testing full files, we will
-                              // never finish every call
+                               // never finish every call
     }
 
     return graphs;

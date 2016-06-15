@@ -28,7 +28,7 @@ public:
     std::string print_ins();
 
     // returns the address the block is predicted to branch to
-    uint64_t next();
+    uint64_t predict();
 
     // returns the last instruction in the block, presumably a Jmp
     std::shared_ptr<Jmp> get_last();
@@ -51,6 +51,7 @@ public:
 private:
 	uint64_t block_addr;
     uint64_t block_tag;
+    uint64_t prediction;
 
     vector_shared<Ins> ins;
 

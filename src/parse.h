@@ -17,6 +17,8 @@ struct BlockFile {
     std::vector<uint64_t> calls;
 };
 
+float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &total);
+
 BlockFile parse_file(std::string path);
 
 #endif

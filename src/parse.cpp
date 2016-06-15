@@ -11,6 +11,85 @@ uint64_t s_to_uint64(std::string s) {
     return ret;
 }
 
+/*
+ * this function checks the accuracy of the heuristic predictions
+ */
+float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &total) {
+    std::ifstream file(path);
+
+    uint correct = 0;
+    std::shared_ptr<BBlock> prev_block = nullptr;
+    for(std::string line; getline(file, line);) {
+        std::shared_ptr<BBlock> block = nullptr;
+
+        // skip empty lines
+        if(line.length() == 0) continue;
+
+        // skip block number lines
+        if(line.substr(0, 5) == "Block") continue;
+
+        // catch the blocks we created separately from the file from calls
+        if(line.substr(2, 2) == "0x") {
+            uint64_t addr = s_to_uint64(line.substr(2, 18));
+            std::shared_ptr<BBlock> block = nullptr;
+
+            // skip the first address in a basic block (same data as tag)
+            if(addr == prev_block->get_loc()) continue;
+
+            block = search_bblocks(blocks, addr);
+        } else if(line.at(0) == ' ') {
+            continue; // skip any other line that starts with whitespace
+        } else {
+            // anything else is a tag line
+            uint64_t tag = s_to_uint64(line);
+            block = search_bblocks(blocks, tag, true);
+        }
+
+        // this is intended to only trigger on blocks we tried to create from
+        // instruction addresses
+        if(block == nullptr) continue;
+
+        // if the block does not not have a static branch, we won't attempt to
+        // predict the branch
+        if(!block->static_jmp()) {
+            prev_block = block;
+            continue;
+        }
+
+        // if prev_block hasn't been assigned, assign it and move to the next
+        // bblock
+        if(prev_block == nullptr) {
+            prev_block = block;
+            continue;
+        }
+
+        // if our prediction failed (was FAIL_H) we skip this block
+        // when a prediction fails, it is often due to a dynamic branch
+        // or having incomplete information about the surrounding blocks
+        if(prev_block->predict() == 0xFFFFFFFFFFFFFFFF) {
+            prev_block = block;
+            continue;
+        }
+
+        if(prev_block->predict() == block->get_loc()) {
+            ++correct;
+        } else {
+            /*std::cout << std::hex << previous_block->get_loc() << "    \t"
+                      << std::hex << previous_block->predict() << "    \t"
+                      << std::hex << current_block->get_loc() << std::endl;*/
+        }
+
+        ++total;
+        prev_block = block;
+    }
+    return (float)correct/(float)total;
+}
+
+
+/*
+ * the functions below are the initially parse the basic blocks
+ */
+
 std::shared_ptr<Jmp> parse_jmp(std::string jmp_str, std::string args) {
     std::shared_ptr<Jmp> jmp_ret(new Jmp());
 

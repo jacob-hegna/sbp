@@ -19,7 +19,14 @@ int main(int argc, char *argv[]) {
 
     std::vector<Graph> graphs = make_graphs(block_file.blocks, block_file.calls);
 
-    std::cout << graphs.at(15).print_info() << std::endl;
+    for(std::shared_ptr<BBlock> block : block_file.blocks) {
+        block->predict();
+    }
+
+    uint total = 0;
+    float accuracy = check_predictions(path, block_file.blocks, total);
+
+    std::cout << 100 * accuracy << " " << total << std::endl;
 
     return 0;
 }
