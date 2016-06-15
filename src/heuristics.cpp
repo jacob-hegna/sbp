@@ -31,10 +31,10 @@ uint64_t BBlock::combined_h() {
     // compile-time
     auto heuristics = {
         //&BBlock::loop_h,
-        //&BBlock::opcode_h,
-        //&BBlock::call_s_h,
-        //&BBlock::return_s_h,
-        &BBlock::rand_h
+        &BBlock::opcode_h,
+        &BBlock::call_s_h,
+        &BBlock::return_s_h,
+        //&BBlock::rand_h
     };
 
     // iterate through each heuristic, if any of them don't return the
@@ -45,13 +45,6 @@ uint64_t BBlock::combined_h() {
     }
 
     prediction = addr;
-
-    bool swap = false;
-    if(swap && addr == get_jmp()) {
-        addr = get_fall();
-    } else if(swap && addr == get_fall()) {
-        addr = get_jmp();
-    }
 
     return addr;
 }

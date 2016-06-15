@@ -19,7 +19,9 @@ float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &to
 
     uint correct = 0;
     std::shared_ptr<BBlock> prev_block = nullptr;
-    for(std::string line; getline(file, line);) {
+
+    std::string line;
+    while(getline(file, line)) {
         std::shared_ptr<BBlock> block = nullptr;
 
         // skip empty lines
@@ -34,7 +36,9 @@ float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &to
             std::shared_ptr<BBlock> block = nullptr;
 
             // skip the first address in a basic block (same data as tag)
-            if(addr == prev_block->get_loc()) continue;
+            if(addr == prev_block->get_loc()) {
+                continue;
+            }
 
             block = search_bblocks(blocks, addr);
         } else if(line.at(0) == ' ') {
@@ -71,17 +75,25 @@ float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &to
             continue;
         }
 
+        if(prev_block->get_fall() != block->get_loc()
+            && prev_block->get_jmp() != block->get_loc()) {
+            prev_block = block;
+            continue;
+        }
+
+
         if(prev_block->predict() == block->get_loc()) {
             ++correct;
         } else {
-            /*std::cout << std::hex << previous_block->get_loc() << "    \t"
-                      << std::hex << previous_block->predict() << "    \t"
-                      << std::hex << current_block->get_loc() << std::endl;*/
+            /*std::cout << std::hex << prev_block->get_loc() << "    \t"
+                      << std::hex << prev_block->predict() << "    \t"
+                      << std::hex << block->get_loc() << std::endl;*/
         }
 
         ++total;
         prev_block = block;
     }
+
     return (float)correct/(float)total;
 }
 
