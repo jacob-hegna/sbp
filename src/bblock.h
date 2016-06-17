@@ -48,6 +48,8 @@ public:
     uint64_t get_loc();
     uint64_t get_tag();
     vector_shared<Ins> get_ins();
+
+    vector_shared<BBlock> get_parents();
 private:
 	uint64_t block_addr;
     uint64_t block_tag;
@@ -57,7 +59,7 @@ private:
 
     // for the graph
     std::shared_ptr<BBlock> fall, jmp;
-    std::shared_ptr<BBlock> parent;
+    vector_shared<BBlock> parents;
 
     // the below heuristics are defined in heuristics.cpp
 

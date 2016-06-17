@@ -3,7 +3,6 @@
 BBlock::BBlock() {
     fall       = nullptr;
     jmp        = nullptr;
-    parent     = nullptr;
     prediction = 0xFFFFFFFFFFFFFFFF;
 }
 BBlock::BBlock(uint64_t block_tag, uint64_t block_addr) : BBlock() {
@@ -98,4 +97,8 @@ uint64_t BBlock::get_tag() {
 
 vector_shared<Ins> BBlock::get_ins() {
     return ins;
+}
+
+vector_shared<BBlock> BBlock::get_parents() {
+    return parents;
 }

@@ -51,7 +51,6 @@ public:
     Jmp(JmpType jmp_type, uint64_t to, uint64_t from, uint8_t size);
 
     void init(JmpType jmp_type, uint64_t to);
-    bool is_loop();
 
     static JmpType str_to_jmp(std::string jmp_str);
     static std::string jmp_to_str(JmpType jmp_type);

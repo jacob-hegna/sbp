@@ -30,7 +30,7 @@ float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &to
         // skip block number lines
         if(line.substr(0, 5) == "Block") continue;
 
-        // catch the blocks we created separately from the file from calls
+        // catch all the artificially created blocks
         if(line.substr(2, 2) == "0x") {
             uint64_t addr = s_to_uint64(line.substr(2, 18));
             std::shared_ptr<BBlock> block = nullptr;
@@ -136,7 +136,9 @@ std::shared_ptr<Ins> parse_ins(std::string line, std::vector<uint64_t> &calls) {
             addr = s_to_uint64(line.substr(51, 68));
         }
         ins_ret->set_data(addr);
-        calls.push_back(addr);
+
+        if(std::find(calls.begin(), calls.end(), addr) == calls.end())
+            calls.push_back(addr);
     } else if(ins_str == "ret") {
         ins_ret->set_type(InsType::RET);
     }
@@ -195,8 +197,12 @@ BlockFile parse_file(std::string path) {
             if(last_ins_type == InsType::JMP) {
                 if(std::static_pointer_cast<Jmp>(ins.back())->get_jmp_type()
                     == JmpType::JMP) {
-                    last_ins_type = InsType::INS;
-                    continue;
+                    if(line.length() > 51 && line.substr(43, 8) == "jmp    <") {
+                        // TODO: refactor this
+                    } else {
+                        last_ins_type = InsType::INS;
+                        continue;
+                    }
                 }
             }
 

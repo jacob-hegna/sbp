@@ -1,5 +1,22 @@
 #include "graph.h"
 
+#include <fstream>
+
+std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
+                               std::vector<uint64_t> calls) {
+    std::vector<Graph> graphs;
+    
+    for(uint64_t call : calls) {
+        Graph graph(super_set, call);
+        if(graph.get_root() != nullptr)
+            graphs.push_back(graph);
+    }
+
+    return graphs;
+}
+
+
+/*
 std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
                                std::vector<uint64_t> calls) {
     std::vector<Graph> graphs;
@@ -20,11 +37,13 @@ std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
             }
         }
         if(a++ > 10000) break; // because we are not testing full files, we will
-                               // never finish every call
+                               // never finish every call, this prevents
+                               // un-ending execution
     }
 
     return graphs;
 }
+*/
 
 /*
  * determines whether a call contains any other calls nested within it
@@ -122,59 +141,109 @@ void Graph::init(std::shared_ptr<BBlock> leaf) {
     if(leaf == nullptr) return;
 
     for(std::shared_ptr<BBlock> block : super_set) {
+
         if(block->get_loc() == leaf->get_fall()) {
             if(search(block->get_loc()) == nullptr) {
                 leaf->fall = block;
+                block->parents.push_back(leaf);
                 init(block);
+            }
+            bool child = (std::find(block->parents.begin(), block->parents.end(),
+                                    leaf) != block->parents.end());
+            if(!child) {
+                block->parents.push_back(leaf);
+                leaf->fall = block;
             }
         }
 
         if(block->get_loc() == leaf->get_jmp()) {
+            if(leaf->get_ins().size() >= 2) {
+                if(leaf->get_ins().end()[-2]->get_ins_type() == InsType::CALL) {
+                    continue;
+                }
+            }
             if(search(block->get_loc()) == nullptr) {
                 leaf->jmp = block;
+                block->parents.push_back(leaf);
                 init(block);
             }
+            bool child = (std::find(block->parents.begin(), block->parents.end(),
+                                    leaf) != block->parents.end());
+            if(!child) {
+                block->parents.push_back(leaf);
+                leaf->jmp = block;
+            }
+
         }
     }
 }
 
-void Graph::insert(std::shared_ptr<BBlock> parent, std::shared_ptr<BBlock> child,
-                   bool is_jmp) {
-    if(is_jmp) {
-        parent->jmp = child;
-    } else {
-        parent->fall = child;
+bool Graph::isolated(std::shared_ptr<BBlock> leaf,
+                            vector_shared<BBlock> finished_blocks) {
+    if(leaf == nullptr) leaf = root;
+
+    if(std::find(finished_blocks.begin(), finished_blocks.end(), leaf)
+        != finished_blocks.end()) {
+        return true;
     }
+    finished_blocks.push_back(leaf);
+
+    bool correct = dominator_check(leaf, root);
+
+    if(leaf->jmp  != nullptr) correct = correct && isolated(leaf->jmp,  finished_blocks);
+    if(leaf->fall != nullptr) correct = correct && isolated(leaf->fall, finished_blocks);
+
+    return correct;
 }
+
+bool Graph::dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBlock> dominator,
+                            vector_shared<BBlock> finished_blocks) {
+    if(std::find(finished_blocks.begin(), finished_blocks.end(), block)
+        != finished_blocks.end()) {
+        return true;
+    }
+    finished_blocks.push_back(block);
+
+    if(block == dominator) return true;
+    if(block->parents.size() == 0) return false;
+    if(block->parents.size() == 1) {
+        if(block->parents.at(0) == dominator)  return true;
+        if(block->parents.at(0) == this->root) return false;
+    }
+    for(std::shared_ptr<BBlock> b : block->parents) {
+        if(dominator_check(b, dominator, finished_blocks) == false) {
+            return false;
+        }
+    }
+    return true;
+}
+
 
 std::shared_ptr<BBlock> Graph::search(uint64_t addr) {
     return search(addr, root);
 }
 
-std::shared_ptr<BBlock> Graph::search(uint64_t addr, std::shared_ptr<BBlock> leaf) {
-    static vector_shared<BBlock> searched_nodes; // prevents infinite recursion
+std::shared_ptr<BBlock> Graph::search(uint64_t addr, std::shared_ptr<BBlock> leaf,
+                                      vector_shared<BBlock> searched_nodes) {
     if(std::find(searched_nodes.begin(), searched_nodes.end(), leaf)
          != searched_nodes.end()) {
         return nullptr;
     } else {
         searched_nodes.push_back(leaf);
     }
+
     if(leaf != nullptr) {
         if(leaf->get_loc() == addr) {
-            searched_nodes.clear();
             return leaf;
         } else {
             std::shared_ptr<BBlock> ret = nullptr;
-            if((ret = search(addr, leaf->fall)) != nullptr) {
-                searched_nodes.clear();
+            if((ret = search(addr, leaf->fall, searched_nodes)) != nullptr) {
                 return ret;
-            } else if((ret = search(addr, leaf->jmp)) != nullptr) {
-                searched_nodes.clear();
+            } else if((ret = search(addr, leaf->jmp, searched_nodes)) != nullptr) {
                 return ret;
             }
         }
     }
-    searched_nodes.clear();
     return nullptr;
 }
 
@@ -186,6 +255,44 @@ std::string Graph::print_info(std::shared_ptr<BBlock> leaf) {
 
     if(leaf->jmp != nullptr)  ss << print_info(leaf->jmp);
     if(leaf->fall != nullptr) ss << print_info(leaf->fall);
+
+    return ss.str();
+}
+
+void Graph::print_dot_file(std::string path) {
+    std::ofstream file(path);
+
+    file << "digraph g {" << std::endl;
+    vector_shared<BBlock> completed;
+    file << print_dot_file(root, completed);
+    file << "}";
+
+    file.close();
+}
+
+std::string Graph::print_dot_file(std::shared_ptr<BBlock> leaf,
+                                  vector_shared<BBlock> &completed) {
+    std::stringstream ss;
+
+    if(leaf == nullptr) return "";
+    if(std::find(completed.begin(), completed.end(), leaf) != completed.end()) {
+        return "";
+    }
+    completed.push_back(leaf);
+
+    if(leaf->fall != nullptr) {
+        ss << "\t\"0x" << std::hex << leaf->get_loc()  << "\" -> \"0x"
+                       << std::hex << leaf->get_fall() << "\""
+                       << " [label=\" fall\"];"        << std::endl;
+        ss << print_dot_file(leaf->fall, completed);
+    }
+
+    if(leaf->jmp != nullptr) {
+        ss << "\t\"0x" << std::hex << leaf->get_loc() << "\" -> \"0x"
+                       << std::hex << leaf->get_jmp() << "\""
+                       << " [label=\" jmp\"];"        << std::endl;
+        ss << print_dot_file(leaf->jmp, completed);
+    }
 
     return ss.str();
 }

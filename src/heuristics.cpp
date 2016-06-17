@@ -30,10 +30,10 @@ uint64_t BBlock::combined_h() {
     // so for portability, we let the compiler determine the exact type at 
     // compile-time
     auto heuristics = {
-        //&BBlock::loop_h,
-        &BBlock::opcode_h,
-        &BBlock::call_s_h,
-        &BBlock::return_s_h,
+        &BBlock::loop_h,
+        //&BBlock::opcode_h,
+        ///&BBlock::call_s_h,
+        //&BBlock::return_s_h,
         //&BBlock::rand_h
     };
 
@@ -42,6 +42,15 @@ uint64_t BBlock::combined_h() {
     // Otherwise, it will default to the rand_h heuristic
     for(auto heuristic : heuristics) {
         if((addr = (this->*heuristic)()) != FAIL_H) break;
+    }
+
+    bool swap = false;
+    if(swap) {
+        if(addr == get_jmp()) {
+            addr = get_fall();
+        } else if(addr == get_fall()) {
+            addr = get_jmp();
+        }
     }
 
     prediction = addr;
@@ -54,12 +63,7 @@ uint64_t BBlock::combined_h() {
  * loop back
  */
 uint64_t BBlock::loop_h() {
-    Jmp *exit = (Jmp*)(get_ins().back().get());
-    if(exit->is_loop()) {
-        return this->get_jmp();
-    }
-
-    return FAIL_H;
+    return (get_jmp() < get_loc()) ? get_jmp() : FAIL_H;
 }
 
 /*
@@ -67,7 +71,7 @@ uint64_t BBlock::loop_h() {
  * prediction based off of that branch condition
  */
 uint64_t BBlock::opcode_h() {
-    Jmp *exit = (Jmp*)(get_ins().back().get());
+    std::shared_ptr<Jmp> exit = this->get_last();
 
     // this function (actually a pointer to a lambda) detects whether the given
     // conditional branch (jmp) is in the given vector of branches (jmps)
@@ -83,7 +87,8 @@ uint64_t BBlock::opcode_h() {
     // many functions return 0 or greater to indicate success, so we predict
     // these branches will be taken
     std::vector<JmpType> jmp_zero_or_greater = {
-        //JmpType::JZ,
+        JmpType::JNZ,
+
         //JmpType::JNB,
         //JmpType::JA,
         //JmpType::JGE,
@@ -101,10 +106,9 @@ uint64_t BBlock::opcode_h() {
     std::vector<JmpType> jmp_negative = {
         JmpType::JZ,
         JmpType::JNL,
-        JmpType::JLE,
-        JmpType::JNZ,
         JmpType::JB,
 
+        //JmpType::JLE,
         //JmpType::JNAE,
         //JmpType::JL,
         //JmpType::JNGE

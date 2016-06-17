@@ -80,10 +80,6 @@ void Jmp::init(JmpType jmp_type, uint64_t to) {
     this->static_jmp = true;
 }
 
-bool Jmp::is_loop() {
-    return loc > to;
-}
-
 void Jmp::set_static(bool static_jmp) {
     this->static_jmp = static_jmp;
     if(static_jmp == false) this->to = 0xFFFFFFFFFFFFFFFF;
