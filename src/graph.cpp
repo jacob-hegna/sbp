@@ -141,7 +141,6 @@ void Graph::init(std::shared_ptr<BBlock> leaf) {
     if(leaf == nullptr) return;
 
     for(std::shared_ptr<BBlock> block : super_set) {
-
         if(block->get_loc() == leaf->get_fall()) {
             if(search(block->get_loc()) == nullptr) {
                 leaf->fall = block;

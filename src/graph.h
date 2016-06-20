@@ -11,7 +11,7 @@
 std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
                                std::vector<uint64_t> calls);
 
-class Graph : public std::enable_shared_from_this<Graph> {
+class Graph {
 public:
     Graph();
     Graph(vector_shared<BBlock> super_set, uint64_t addr);
@@ -23,6 +23,7 @@ public:
 
     bool isolated(std::shared_ptr<BBlock> leaf = nullptr,
         vector_shared<BBlock> finished_blocks = vector_shared<BBlock>());
+
     bool dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBlock> dominator,
     vector_shared<BBlock> finished_blocks = vector_shared<BBlock>());
 
