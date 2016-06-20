@@ -190,6 +190,11 @@ bool Graph::isolated(std::shared_ptr<BBlock> leaf,
 
     bool correct = dominator_check(leaf, root);
 
+    if(!correct) {
+        std::cout << std::hex << leaf->get_loc() << std::endl;
+        return false;
+    }
+
     if(leaf->jmp  != nullptr) correct = correct && isolated(leaf->jmp,  finished_blocks);
     if(leaf->fall != nullptr) correct = correct && isolated(leaf->fall, finished_blocks);
 

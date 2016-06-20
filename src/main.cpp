@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 
-#include "vector_shared.h"
 #include "bblock.h"
 #include "parse.h"
 #include "graph.h"
@@ -20,12 +19,14 @@ int main(int argc, char *argv[]) {
     std::vector<Graph> graphs = make_graphs(block_file.blocks, block_file.calls);
 
 
+    Graph graph;
     for(Graph g : graphs) {
-        if(g.get_root()->get_loc() == 0x40139c) {
-            g.print_dot_file("dot.txt");
+        if(g.isolated() == false) {
+            graph = g;
         }
     }
-
+    
+    graph.print_dot_file("dot.txt");
 /*
 
     for(std::shared_ptr<BBlock> block : block_file.blocks) {

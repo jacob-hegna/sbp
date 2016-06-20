@@ -1,4 +1,4 @@
-#include "vector_shared.h"
+#include "smart_vector.h"
 
 #include "bblock.h"
 

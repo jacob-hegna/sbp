@@ -10,7 +10,7 @@
 #include "asm/jmp.h"
 
 #include "bblock.h"
-#include "vector_shared.h"
+#include "smart_vector.h"
 
 struct BlockFile {
     vector_shared<BBlock> blocks;

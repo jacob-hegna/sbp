@@ -11,7 +11,7 @@
 #include "asm/ins.h"
 #include "asm/jmp.h"
 
-#include "vector_shared.h"
+#include "smart_vector.h"
 
 class Graph;
 
