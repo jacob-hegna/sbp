@@ -1,8 +1,6 @@
 #include "bblock.h"
 
-BBlock::BBlock() {
-    fall       = nullptr;
-    jmp        = nullptr;
+BBlock::BBlock() : rng(std::random_device()()), dist(0, 1) {
     prediction = 0xFFFFFFFFFFFFFFFF;
 }
 BBlock::BBlock(uint64_t block_tag, uint64_t block_addr) : BBlock() {
@@ -44,10 +42,10 @@ std::string BBlock::print_ins() {
     return ss.str();
 }
 
-uint64_t BBlock::predict() {
+uint64_t BBlock::predict(uint64_t (BBlock::*indiv_heuristic)()) {
     uint64_t ret;
     if(prediction == 0xFFFFFFFFFFFFFFFF) {
-        ret = this->combined_h();
+        ret = this->combined_h(indiv_heuristic);
     } else {
         ret = prediction;
     }
@@ -99,6 +97,6 @@ vector_shared<Ins> BBlock::get_ins() {
     return ins;
 }
 
-vector_shared<BBlock> BBlock::get_parents() {
+vector_weak<BBlock> BBlock::get_parents() {
     return parents;
 }

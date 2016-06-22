@@ -15,99 +15,6 @@ std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
     return graphs;
 }
 
-
-/*
-std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
-                               std::vector<uint64_t> calls) {
-    std::vector<Graph> graphs;
-    std::vector<uint64_t> finished_calls;
-
-    int a = 0;
-    while(finished_calls.size() != calls.size()) {
-        for(uint64_t call : calls) {
-            if(std::find(finished_calls.begin(), finished_calls.end(), call)
-                != finished_calls.end()) continue;
-            if(Graph::good_call(super_set, call, finished_calls)) {
-                Graph graph(super_set, call);
-                if(graph.get_root() != nullptr)
-                    graphs.push_back(graph);
-
-                // add the call from the regular vector to the finished vector
-                finished_calls.push_back(call);
-            }
-        }
-        if(a++ > 10000) break; // because we are not testing full files, we will
-                               // never finish every call, this prevents
-                               // un-ending execution
-    }
-
-    return graphs;
-}
-*/
-
-/*
- * determines whether a call contains any other calls nested within it
- * it ignore nested calls that are in the finished_calls vector
- */
-bool Graph::good_call(vector_shared<BBlock> super_set, uint64_t addr,
-                      const std::vector<uint64_t> finished_calls) {
-    static std::vector<uint64_t> parsed_blocks;
-    if(std::find(parsed_blocks.begin(), parsed_blocks.end(), addr) != parsed_blocks.end()) {
-        return true;
-    }
-    parsed_blocks.push_back(addr);
-
-    std::shared_ptr<BBlock> block = nullptr;
-    for(std::shared_ptr<BBlock> i : super_set) {
-        if(i->get_loc() == addr) {
-            block = i;
-            break;
-        }
-    }
-
-    // we return true, because even though we cannot find a block matching the
-    // addr, returning false creates an infinite loop - but returning true
-    // creates the desired output
-    if(block == nullptr) return true;
-
-    // record how many calls are made inside the relevant call
-    static int depth = 0;
-
-    // if the call block has another call inside of it, it's "bad"
-    for(std::shared_ptr<Ins> ins : block->get_ins()) {
-        if(ins->get_ins_type() == InsType::CALL) {
-            ++depth;
-            bool finished = false;
-            // ...unless that call and all sub-calls have already been accounted
-            // for
-            for(uint64_t finished_call : finished_calls) {
-                if(addr == finished_call) {
-                    finished = true;
-                    break;
-                }
-            }
-            if(!finished) return false;
-        }
-    }
-
-    vector_shared<Ins> ins = block->get_ins();
-    if(ins.size() >= 2) {
-        if((ins.end()[-2])->get_ins_type() == InsType::RET) {
-
-            if(depth == 0) {
-                parsed_blocks.clear();
-                return true;
-            }
-            --depth;
-        }
-    }
-
-    bool good_jmp  = good_call(super_set, block->get_jmp(), finished_calls);
-    bool good_fall = good_call(super_set, block->get_fall(), finished_calls);
-
-    return good_jmp && good_fall;
-}
-
 Graph::Graph() {
     root = nullptr;
 }
@@ -140,15 +47,19 @@ void Graph::init(vector_shared<BBlock> super_set, uint64_t leaf) {
 void Graph::init(std::shared_ptr<BBlock> leaf) {
     if(leaf == nullptr) return;
 
+    leaf->graph = this;
+
     for(std::shared_ptr<BBlock> block : super_set) {
+        auto parents_shared = vector_weak_lock<BBlock>(block->parents);
+
         if(block->get_loc() == leaf->get_fall()) {
             if(search(block->get_loc()) == nullptr) {
                 leaf->fall = block;
                 block->parents.push_back(leaf);
                 init(block);
             }
-            bool child = (std::find(block->parents.begin(), block->parents.end(),
-                                    leaf) != block->parents.end());
+            bool child = (std::find(parents_shared.begin(), parents_shared.end(),
+                                    leaf) != parents_shared.end());
             if(!child) {
                 block->parents.push_back(leaf);
                 leaf->fall = block;
@@ -166,8 +77,8 @@ void Graph::init(std::shared_ptr<BBlock> leaf) {
                 block->parents.push_back(leaf);
                 init(block);
             }
-            bool child = (std::find(block->parents.begin(), block->parents.end(),
-                                    leaf) != block->parents.end());
+            bool child = (std::find(parents_shared.begin(), parents_shared.end(),
+                                    leaf) != parents_shared.end());
             if(!child) {
                 block->parents.push_back(leaf);
                 leaf->jmp = block;
@@ -194,14 +105,20 @@ bool Graph::isolated(std::shared_ptr<BBlock> leaf,
         return false;
     }
 
-    if(leaf->jmp  != nullptr) correct = correct && isolated(leaf->jmp,  finished_blocks);
-    if(leaf->fall != nullptr) correct = correct && isolated(leaf->fall, finished_blocks);
+    if(leaf->jmp.use_count()  != 0)  correct = correct && isolated(leaf->jmp.lock(),  finished_blocks);
+    if(leaf->fall.use_count() != 0) correct = correct && isolated(leaf->fall.lock(), finished_blocks);
 
     return correct;
 }
 
 bool Graph::dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBlock> dominator,
                             vector_shared<BBlock> finished_blocks) {
+    static std::shared_ptr<BBlock> original;
+    // first iteration of the recursion
+    if(finished_blocks.size() == 0) {
+        original = block;
+    }
+
     if(std::find(finished_blocks.begin(), finished_blocks.end(), block)
         != finished_blocks.end()) {
         return true;
@@ -211,11 +128,13 @@ bool Graph::dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBloc
     if(block == dominator) return true;
     if(block->parents.size() == 0) return false;
     if(block->parents.size() == 1) {
-        if(block->parents.at(0) == dominator)  return true;
-        if(block->parents.at(0) == this->root) return false;
+        if(block->parents.at(0).lock() == dominator)  return true;
+        if(block->parents.at(0).lock() == this->root) return false;
     }
-    for(std::shared_ptr<BBlock> b : block->parents) {
-        if(dominator_check(b, dominator, finished_blocks) == false) {
+    auto parents_lock = vector_weak_lock<BBlock>(block->parents);
+    for(std::shared_ptr<BBlock> parent : parents_lock) {
+        //if(block != original && parent == original) return false;
+        if(dominator_check(parent, dominator, finished_blocks) == false) {
             return false;
         }
     }
@@ -241,9 +160,9 @@ std::shared_ptr<BBlock> Graph::search(uint64_t addr, std::shared_ptr<BBlock> lea
             return leaf;
         } else {
             std::shared_ptr<BBlock> ret = nullptr;
-            if((ret = search(addr, leaf->fall, searched_nodes)) != nullptr) {
+            if((ret = search(addr, leaf->fall.lock(), searched_nodes)) != nullptr) {
                 return ret;
-            } else if((ret = search(addr, leaf->jmp, searched_nodes)) != nullptr) {
+            } else if((ret = search(addr, leaf->jmp.lock(), searched_nodes)) != nullptr) {
                 return ret;
             }
         }
@@ -257,8 +176,8 @@ std::string Graph::print_info(std::shared_ptr<BBlock> leaf) {
     if(leaf == nullptr) leaf = root;
     ss << leaf->print_info() << std::endl;
 
-    if(leaf->jmp != nullptr)  ss << print_info(leaf->jmp);
-    if(leaf->fall != nullptr) ss << print_info(leaf->fall);
+    if(leaf->jmp.use_count() != 0)  ss << print_info(leaf->jmp.lock());
+    if(leaf->fall.use_count() != 0) ss << print_info(leaf->fall.lock());
 
     return ss.str();
 }
@@ -284,18 +203,18 @@ std::string Graph::print_dot_file(std::shared_ptr<BBlock> leaf,
     }
     completed.push_back(leaf);
 
-    if(leaf->fall != nullptr) {
+    if(leaf->fall.use_count() != 0) {
         ss << "\t\"0x" << std::hex << leaf->get_loc()  << "\" -> \"0x"
                        << std::hex << leaf->get_fall() << "\""
                        << " [label=\" fall\"];"        << std::endl;
-        ss << print_dot_file(leaf->fall, completed);
+        ss << print_dot_file(leaf->fall.lock(), completed);
     }
 
-    if(leaf->jmp != nullptr) {
+    if(leaf->jmp.use_count() != 0) {
         ss << "\t\"0x" << std::hex << leaf->get_loc() << "\" -> \"0x"
                        << std::hex << leaf->get_jmp() << "\""
                        << " [label=\" jmp\"];"        << std::endl;
-        ss << print_dot_file(leaf->jmp, completed);
+        ss << print_dot_file(leaf->jmp.lock(), completed);
     }
 
     return ss.str();

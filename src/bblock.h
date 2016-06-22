@@ -15,7 +15,7 @@
 
 class Graph;
 
-class BBlock {
+class BBlock : public std::enable_shared_from_this<BBlock> {
     friend class Graph;
 public:
     BBlock();
@@ -28,7 +28,7 @@ public:
     std::string print_ins();
 
     // returns the address the block is predicted to branch to
-    uint64_t predict();
+    uint64_t predict(uint64_t (BBlock::*indiv_heuristic)() = {});
 
     // returns the last instruction in the block, presumably a Jmp
     std::shared_ptr<Jmp> get_last();
@@ -49,22 +49,12 @@ public:
     uint64_t get_tag();
     vector_shared<Ins> get_ins();
 
-    vector_shared<BBlock> get_parents();
-private:
-	uint64_t block_addr;
-    uint64_t block_tag;
-    uint64_t prediction;
-
-    vector_shared<Ins> ins;
-
-    // for the graph
-    std::shared_ptr<BBlock> fall, jmp;
-    vector_shared<BBlock> parents;
+    vector_weak<BBlock> get_parents();
 
     // the below heuristics are defined in heuristics.cpp
 
     // the combined heuristics
-    uint64_t combined_h();
+    uint64_t combined_h(uint64_t (BBlock::*indiv_heuristic)() = {});
 
     // heuristics on the given block
     uint64_t opcode_h();
@@ -76,6 +66,27 @@ private:
 
     // default random heuristic
     uint64_t rand_h();
+    
+private:
+	uint64_t block_addr;
+    uint64_t block_tag;
+    uint64_t prediction;
+
+    vector_shared<Ins> ins;
+
+    // normally would use a smart pointer, but this makes more sense in this
+    // context - the graph won't be declared on the heap, so we'll need to make
+    // sure that it's in scope when we use this object
+    Graph *graph;
+
+    // for the graph
+    std::weak_ptr<BBlock> fall, jmp;
+    vector_weak<BBlock> parents;
+
+    // random number generation for rand_h
+    std::random_device rd;
+    std::mt19937 rng;
+    std::uniform_int_distribution<int> dist;
 };
 
 #endif

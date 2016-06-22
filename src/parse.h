@@ -17,7 +17,13 @@ struct BlockFile {
     std::vector<uint64_t> calls;
 };
 
-float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &total);
+struct HeuristicAccuracy {
+    float accuracy;
+    uint coverage;
+};
+
+HeuristicAccuracy check_predictions(std::string path, vector_shared<BBlock> blocks,
+    uint64_t (BBlock::*indiv_heuristic)() = {});
 
 BlockFile parse_file(std::string path);
 

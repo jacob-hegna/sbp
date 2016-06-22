@@ -14,8 +14,12 @@ uint64_t s_to_uint64(std::string s) {
 /*
  * this function checks the accuracy of the heuristic predictions
  */
-float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &total) {
+HeuristicAccuracy check_predictions(std::string path, vector_shared<BBlock> blocks,
+                                    uint64_t (BBlock::*indiv_heuristic)()) {
     std::ifstream file(path);
+    HeuristicAccuracy accuracy;
+    accuracy.accuracy = 0;
+    accuracy.coverage = 0;
 
     uint correct = 0;
     std::shared_ptr<BBlock> prev_block = nullptr;
@@ -70,7 +74,8 @@ float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &to
         // if our prediction failed (was FAIL_H) we skip this block
         // when a prediction fails, it is often due to a dynamic branch
         // or having incomplete information about the surrounding blocks
-        if(prev_block->predict() == 0xFFFFFFFFFFFFFFFF) {
+        uint64_t predict = prev_block->predict(indiv_heuristic);
+        if(predict == 0xFFFFFFFFFFFFFFFF) {
             prev_block = block;
             continue;
         }
@@ -82,7 +87,7 @@ float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &to
         }
 
 
-        if(prev_block->predict() == block->get_loc()) {
+        if(predict == block->get_loc()) {
             ++correct;
         } else {
             /*std::cout << std::hex << prev_block->get_loc() << "    \t"
@@ -90,20 +95,16 @@ float check_predictions(std::string path, vector_shared<BBlock> blocks, uint &to
                       << std::hex << block->get_loc() << std::endl;*/
         }
 
-        ++total;
+        ++accuracy.coverage;
         prev_block = block;
     }
 
-    return (float)correct/(float)total;
+    accuracy.accuracy = (float)correct/(float)accuracy.coverage;
+    return accuracy;
 }
 
-
-/*
- * the functions below are the initially parse the basic blocks
- */
-
 std::shared_ptr<Jmp> parse_jmp(std::string jmp_str, std::string args) {
-    std::shared_ptr<Jmp> jmp_ret(new Jmp());
+    auto jmp_ret = std::make_shared<Jmp>();
 
     // we can only predict the branch if it jmps to a register
     if(args.at(0) == '$') {
@@ -118,7 +119,7 @@ std::shared_ptr<Jmp> parse_jmp(std::string jmp_str, std::string args) {
 }
 
 std::shared_ptr<Ins> parse_ins(std::string line, std::vector<uint64_t> &calls) {
-    std::shared_ptr<Ins> ins_ret(new Ins());
+    auto ins_ret = std::make_shared<Ins>();
 
     std::string ins_str = line.substr(43, 7);
 
@@ -210,11 +211,11 @@ BlockFile parse_file(std::string path) {
                 block_tag = ins.at(0)->get_loc();
             }
 
-            std::shared_ptr<BBlock> block(new BBlock(block_tag, ins.at(0)->get_loc()));
+            auto block = std::make_shared<BBlock>(block_tag, ins.at(0)->get_loc());
 
             // check if the basic block branches statically or not
             if(ins.back()->get_ins_type() != InsType::JMP) {
-                std::shared_ptr<Jmp> last_jmp(new Jmp());
+                auto last_jmp = std::make_shared<Jmp>();
                 if(ins.back()->get_ins_type() == InsType::CALL) {
                     if(ins.back()->get_data() != 0xFFFFFFFFFFFFFFFF) {
                         last_jmp->set_static(true);

@@ -14,8 +14,8 @@ CC          = g++
 LINKER      = $(CC)
 ARCH        = 64
 
-CCFLAGS     = -c -Wall -g -O2 -m$(ARCH) -std=c++11
-LINKFLAGS   = -m$(ARCH)
+CCFLAGS     = -c -Wall -g -O2 -pthread -m$(ARCH) -std=c++11
+LINKFLAGS   = -m$(ARCH) -pthread
 
 
 TARGET = sbp

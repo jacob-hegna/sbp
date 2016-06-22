@@ -4,6 +4,8 @@
 #include <random>
 #include <algorithm>
 
+#include "graph.h"
+
 /*
  * 0xFFFFFFFFFFFFFFFF is the hex code I'll use to show the heuristic failed,
  * (or didn't match/apply). It's not perfect, but it's unlikely to have a
@@ -12,8 +14,32 @@
 
 #define FAIL_H 0xFFFFFFFFFFFFFFFF
 
-uint64_t BBlock::combined_h() {
-    uint64_t addr = 0x0;
+uint64_t BBlock::combined_h(uint64_t (BBlock::*indiv_heuristic)()) {
+    uint64_t addr = FAIL_H;
+
+    auto heuristics = {
+        &BBlock::loop_h,
+        &BBlock::opcode_h,
+        &BBlock::call_s_h,
+        &BBlock::return_s_h,
+        &BBlock::rand_h
+    };
+
+    bool debug_mode = (std::find(heuristics.begin(), heuristics.end(), indiv_heuristic) 
+                        != heuristics.end());
+
+    if(!debug_mode) {
+        // iterate through each heuristic, if any of them don't return the
+        // FAIL_H error code, break out and use that address
+        // Otherwise, it will default to the rand_h heuristic
+        for(auto heuristic : heuristics) {
+            if((addr = (this->*heuristic)()) != FAIL_H) break;
+        }
+    } else {
+        addr = (this->*indiv_heuristic)();
+    }
+
+    if(!debug_mode) prediction = addr;
 
     // if don't know at compile-time where the block branches to, we can't
     // make a prediction
@@ -21,39 +47,11 @@ uint64_t BBlock::combined_h() {
         return FAIL_H;
     }
 
-    if(ins.end()[-2]->get_ins_type() == InsType::CALL) {
-        return FAIL_H;
-    }
-
-    // this auto becomes std::function<uint64_t(void)> at compile-time, but
-    // gcc won't allow uint64_t in the template parameters for whatever reason,
-    // so for portability, we let the compiler determine the exact type at 
-    // compile-time
-    auto heuristics = {
-        &BBlock::loop_h,
-        //&BBlock::opcode_h,
-        ///&BBlock::call_s_h,
-        //&BBlock::return_s_h,
-        //&BBlock::rand_h
-    };
-
-    // iterate through each heuristic, if any of them don't return the
-    // FAIL_H error code, break out and use that address
-    // Otherwise, it will default to the rand_h heuristic
-    for(auto heuristic : heuristics) {
-        if((addr = (this->*heuristic)()) != FAIL_H) break;
-    }
-
-    bool swap = false;
-    if(swap) {
-        if(addr == get_jmp()) {
-            addr = get_fall();
-        } else if(addr == get_fall()) {
-            addr = get_jmp();
+    if(ins.size() >= 2) {
+        if(ins.end()[-2]->get_ins_type() == InsType::CALL) {
+            return FAIL_H;
         }
     }
-
-    prediction = addr;
 
     return addr;
 }
@@ -63,7 +61,25 @@ uint64_t BBlock::combined_h() {
  * loop back
  */
 uint64_t BBlock::loop_h() {
-    return (get_jmp() < get_loc()) ? get_jmp() : FAIL_H;
+    if(graph == nullptr) {
+        return FAIL_H;
+    }
+
+    if(jmp.use_count() == 0) {
+        return FAIL_H;
+    }
+
+    std::shared_ptr<BBlock> jmp_shared = jmp.lock();
+
+    if(jmp_shared->get_loc() > this->get_loc()) {
+        return FAIL_H;
+    }
+
+    if(graph->dominator_check(shared_from_this(), jmp_shared)) {
+        return get_fall();
+    }
+
+    return FAIL_H;
 }
 
 /*
@@ -87,14 +103,11 @@ uint64_t BBlock::opcode_h() {
     // many functions return 0 or greater to indicate success, so we predict
     // these branches will be taken
     std::vector<JmpType> jmp_zero_or_greater = {
-        JmpType::JNZ,
+        JmpType::JLE
 
-        //JmpType::JNB,
         //JmpType::JA,
         //JmpType::JGE,
-        //JmpType::JNL,
         //JmpType::JG,
-        //JmpType::JLE
     };
     if(jmp_matches(jmp_zero_or_greater, exit->get_jmp_type())) {
         return this->get_jmp();
@@ -104,9 +117,11 @@ uint64_t BBlock::opcode_h() {
     // branch will fall-through as we should expect many of those to be error
     // codes
     std::vector<JmpType> jmp_negative = {
+        JmpType::JNZ,
         JmpType::JZ,
         JmpType::JNL,
         JmpType::JB,
+        JmpType::JNB
 
         //JmpType::JLE,
         //JmpType::JNAE,
@@ -121,14 +136,17 @@ uint64_t BBlock::opcode_h() {
 }
 
 /*
- * checks each successor branch for a call instruction, chooses the one WITHOUT
+ * checks each successor branch for a call instruction, chooses the one with
  * the call. if each has a call, return FAIL_H
  */
 uint64_t BBlock::call_s_h() {
-    if(fall == nullptr || jmp == nullptr) return FAIL_H;
+    std::shared_ptr<BBlock> fall_shared = fall.lock();
+    std::shared_ptr<BBlock> jmp_shared  = jmp.lock();
+
+    if(fall_shared == nullptr || jmp_shared == nullptr) return FAIL_H;
 
     bool next_fall_call = false;
-    for(std::shared_ptr<Ins> i : fall->get_ins()) {
+    for(std::shared_ptr<Ins> i : fall_shared->get_ins()) {
         if(i->get_ins_type() == InsType::CALL) {
             next_fall_call = true;
             break;
@@ -136,7 +154,7 @@ uint64_t BBlock::call_s_h() {
     }
 
     bool next_jmp_call = false;
-    for(std::shared_ptr<Ins> i : jmp->get_ins()) {
+    for(std::shared_ptr<Ins> i : jmp_shared->get_ins()) {
         if(i->get_ins_type() == InsType::CALL) {
             next_jmp_call = true;
             break;
@@ -145,10 +163,10 @@ uint64_t BBlock::call_s_h() {
 
     if(next_fall_call && next_jmp_call) { // guards against the dual case
         return FAIL_H;
-    } else if(next_fall_call) {           // note the returns are the converse
-        return jmp->get_loc();            // of what would normally be expected
+    } else if(next_fall_call) {
+        return fall_shared->get_loc();
     } else if(next_jmp_call) {
-        return fall->get_loc();
+        return jmp_shared->get_loc();
     }
     return FAIL_H;
 }
@@ -158,10 +176,13 @@ uint64_t BBlock::call_s_h() {
  * WITHOUT the return. if each has a return, return FAIL_H
  */
 uint64_t BBlock::return_s_h() {
-    if(fall == nullptr || jmp == nullptr) return FAIL_H;
+    std::shared_ptr<BBlock> fall_shared = fall.lock();
+    std::shared_ptr<BBlock> jmp_shared  = jmp.lock();
+
+    if(fall_shared == nullptr || jmp_shared == nullptr) return FAIL_H;
 
     bool next_fall_ret = false;
-    for(std::shared_ptr<Ins> i : fall->get_ins()) {
+    for(std::shared_ptr<Ins> i : fall_shared->get_ins()) {
         if(i->get_ins_type() == InsType::RET) {
             next_fall_ret = true;
             break;
@@ -169,7 +190,7 @@ uint64_t BBlock::return_s_h() {
     }
 
     bool next_jmp_ret = false;
-    for(std::shared_ptr<Ins> i : jmp->get_ins()) {
+    for(std::shared_ptr<Ins> i : jmp_shared->get_ins()) {
         if(i->get_ins_type() == InsType::RET) {
             next_jmp_ret = true;
             break;
@@ -179,9 +200,9 @@ uint64_t BBlock::return_s_h() {
     if(next_fall_ret && next_jmp_ret) { // guards against the dual case
         return FAIL_H;
     } else if(next_fall_ret) {          // note the returns are the converse
-        return jmp->get_loc();          // of what would normally be expected
+        return jmp_shared->get_loc();          // of what would normally be expected
     } else if(next_jmp_ret) {
-        return fall->get_loc();
+        return fall_shared->get_loc();
     }
     return FAIL_H;
 
@@ -191,9 +212,5 @@ uint64_t BBlock::return_s_h() {
  * if no previous heuristics create a useful prediction, default to random
  */
 uint64_t BBlock::rand_h() {    
-    std::random_device rd;
-    std::mt19937 rng(rd());
-    std::uniform_int_distribution<int> dist(0, 1);
-
     return (dist(rng) ? get_jmp() : get_fall());
 }
