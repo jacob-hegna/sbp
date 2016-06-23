@@ -56,6 +56,9 @@ public:
     // the combined heuristics
     uint64_t combined_h(uint64_t (BBlock::*indiv_heuristic)() = {});
 
+    // for spawning a thread that tests all the the heuristics
+    uint64_t combined_h() {return 0xFFFFFFFFFFFFFFFF;}
+
     // heuristics on the given block
     uint64_t opcode_h();
     uint64_t loop_h();

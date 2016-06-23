@@ -41,5 +41,8 @@ int main(int argc, char *argv[]) {
     CheckerThread rand_h("rand_h", &BBlock::rand_h);
     rand_h.start();
 
+    CheckerThread combined_h("combined_h", &BBlock::combined_h);
+    combined_h.start(false);
+
     return 0;
 }

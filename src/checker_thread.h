@@ -29,8 +29,12 @@ public:
         if(thread.joinable()) thread.join();
     }
 
-    void start() {
-        thread = std::thread(&CheckerThread::thread_main, this);
+    void start(bool new_thread = true) {
+        if(new_thread) {
+            thread = std::thread(&CheckerThread::thread_main, this);
+        } else {
+            thread_main();
+        }
     }
 
     static void set_exec_path(std::vector<uint64_t> exec_path) {
