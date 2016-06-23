@@ -11,23 +11,13 @@ uint64_t s_to_uint64(std::string s) {
     return ret;
 }
 
-/*
- * this function checks the accuracy of the heuristic predictions
- */
-HeuristicAccuracy check_predictions(std::string path, vector_shared<BBlock> blocks,
-                                    uint64_t (BBlock::*indiv_heuristic)()) {
+std::vector<uint64_t> get_exec_path(std::string path,
+                                    vector_shared<BBlock> super_set) {
+    std::vector<uint64_t> exec_path;
     std::ifstream file(path);
-    HeuristicAccuracy accuracy;
-    accuracy.accuracy = 0;
-    accuracy.coverage = 0;
-
-    uint correct = 0;
-    std::shared_ptr<BBlock> prev_block = nullptr;
 
     std::string line;
     while(getline(file, line)) {
-        std::shared_ptr<BBlock> block = nullptr;
-
         // skip empty lines
         if(line.length() == 0) continue;
 
@@ -37,70 +27,19 @@ HeuristicAccuracy check_predictions(std::string path, vector_shared<BBlock> bloc
         // catch all the artificially created blocks
         if(line.substr(2, 2) == "0x") {
             uint64_t addr = s_to_uint64(line.substr(2, 18));
-            std::shared_ptr<BBlock> block = nullptr;
 
-            // skip the first address in a basic block (same data as tag)
-            if(addr == prev_block->get_loc()) {
-                continue;
+            std::shared_ptr<BBlock> block;
+            if((block = search_bblocks(super_set, addr)) != nullptr &&
+                block->get_tag() != exec_path.back()) {
+                exec_path.push_back(addr);
             }
-
-            block = search_bblocks(blocks, addr);
         } else if(line.at(0) == ' ') {
             continue; // skip any other line that starts with whitespace
         } else {
-            // anything else is a tag line
-            uint64_t tag = s_to_uint64(line);
-            block = search_bblocks(blocks, tag, true);
+            exec_path.push_back(s_to_uint64(line));
         }
-
-        // this is intended to only trigger on blocks we tried to create from
-        // instruction addresses
-        if(block == nullptr) continue;
-
-        // if the block does not not have a static branch, we won't attempt to
-        // predict the branch
-        if(!block->static_jmp()) {
-            prev_block = block;
-            continue;
-        }
-
-        // if prev_block hasn't been assigned, assign it and move to the next
-        // bblock
-        if(prev_block == nullptr) {
-            prev_block = block;
-            continue;
-        }
-
-        // if our prediction failed (was FAIL_H) we skip this block
-        // when a prediction fails, it is often due to a dynamic branch
-        // or having incomplete information about the surrounding blocks
-        uint64_t predict = prev_block->predict(indiv_heuristic);
-        if(predict == 0xFFFFFFFFFFFFFFFF) {
-            prev_block = block;
-            continue;
-        }
-
-        if(prev_block->get_fall() != block->get_loc()
-            && prev_block->get_jmp() != block->get_loc()) {
-            prev_block = block;
-            continue;
-        }
-
-
-        if(predict == block->get_loc()) {
-            ++correct;
-        } else {
-            /*std::cout << std::hex << prev_block->get_loc() << "    \t"
-                      << std::hex << prev_block->predict() << "    \t"
-                      << std::hex << block->get_loc() << std::endl;*/
-        }
-
-        ++accuracy.coverage;
-        prev_block = block;
     }
-
-    accuracy.accuracy = (float)correct/(float)accuracy.coverage;
-    return accuracy;
+    return exec_path;
 }
 
 std::shared_ptr<Jmp> parse_jmp(std::string jmp_str, std::string args) {

@@ -212,5 +212,5 @@ uint64_t BBlock::return_s_h() {
  * if no previous heuristics create a useful prediction, default to random
  */
 uint64_t BBlock::rand_h() {    
-    return (dist(rng) ? get_jmp() : get_fall());
+    return /*(dist(rng) ? get_jmp() : get_fall());*/ get_jmp();
 }

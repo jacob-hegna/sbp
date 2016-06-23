@@ -6,19 +6,7 @@
 #include "bblock.h"
 #include "parse.h"
 #include "graph.h"
-
-void prediction_thread(std::string path, vector_shared<BBlock> super_set,
-            std::string heuristic_str, uint64_t (BBlock::*heuristic_fn)()) {
-
-    HeuristicAccuracy acc = check_predictions(path, super_set, heuristic_fn);
-    std::stringstream ss;
-    ss << heuristic_str << ": " << std::endl
-       << "\taccuracy: " << acc.accuracy * 100
-       << "\tcoverage: " << acc.coverage
-       << std::endl;
-    std::cout << ss.str();
-}
-
+#include "checker_thread.h"
 
 int main(int argc, char *argv[]) {
     std::string path;
@@ -33,47 +21,25 @@ int main(int argc, char *argv[]) {
 
     std::vector<Graph> graphs = make_graphs(block_file.blocks, block_file.calls);
 
-    std::array<std::string, 5> heuristic_str = {
-        "BBlock::loop_h",
-        "BBlock::opcode_h",
-        "BBlock::call_s_h",
-        "BBlock::return_s_h",
-        "BBlock::rand_h"
-    };
+    std::vector<uint64_t> exec_path = get_exec_path(path, block_file.blocks);
 
-    std::array<uint64_t(BBlock::*)() , 5> heuristic_fn = {
-        &BBlock::loop_h,
-        &BBlock::opcode_h,
-        &BBlock::call_s_h,
-        &BBlock::return_s_h,
-        &BBlock::rand_h
-    };
+    CheckerThread::set_exec_path(exec_path);
+    CheckerThread::set_bblocks(block_file.blocks);
 
-    std::vector<std::thread> heuristic_threads;
-/*
-    for(int i = 0; i < 2; ++i) {
-        prediction_thread(
-            path,
-            block_file.blocks,
-            heuristic_str[i],
-            heuristic_fn[i]
-        );
-    }   
-*/
+    CheckerThread loop_h("loop_h", &BBlock::loop_h);
+    loop_h.start();
 
-    for(int i = 0; i < 2; ++i) {
-        heuristic_threads.push_back(std::thread(
-            prediction_thread,
-            path,
-            block_file.blocks,
-            heuristic_str[i],
-            heuristic_fn[i]
-        ));
-    }
-    
-    for(int i = 0; i < 2; ++i) {
-        heuristic_threads[i].join();
-    }
+    CheckerThread opcode_h("opcode_h", &BBlock::opcode_h);
+    opcode_h.start();
+
+    CheckerThread call_s_h("call_s_h", &BBlock::call_s_h);
+    call_s_h.start();
+
+    CheckerThread return_s_h("return_s_h", &BBlock::return_s_h);
+    return_s_h.start();
+
+    CheckerThread rand_h("rand_h", &BBlock::rand_h);
+    rand_h.start();
 
     return 0;
 }

@@ -84,9 +84,9 @@ private:
     vector_weak<BBlock> parents;
 
     // random number generation for rand_h
-    std::random_device rd;
-    std::mt19937 rng;
-    std::uniform_int_distribution<int> dist;
+    /*static std::random_device rd;
+    static std::mt19937 rng;
+    static std::uniform_int_distribution<int> dist;*/
 };
 
 #endif

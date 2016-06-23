@@ -1,6 +1,11 @@
 #include "bblock.h"
+/*
+static std::random_device rd;
+static std::mt19937 gen(rd());
+static std::uniform_int_distribution<int> dist(0, 1);
+*/
 
-BBlock::BBlock() : rng(std::random_device()()), dist(0, 1) {
+BBlock::BBlock() {
     prediction = 0xFFFFFFFFFFFFFFFF;
 }
 BBlock::BBlock(uint64_t block_tag, uint64_t block_addr) : BBlock() {
