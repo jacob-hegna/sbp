@@ -211,6 +211,9 @@ uint64_t BBlock::return_s_h() {
 /*
  * if no previous heuristics create a useful prediction, default to random
  */
+std::random_device BBlock::rd;
+std::mt19937 BBlock::rng(rd());
+std::uniform_int_distribution<int> BBlock::dist(0, 1);
 uint64_t BBlock::rand_h() {    
-    return /*(dist(rng) ? get_jmp() : get_fall());*/ get_jmp();
+    return (dist(rng) ? get_jmp() : get_fall());
 }
