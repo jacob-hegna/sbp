@@ -5,6 +5,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <random>
 #include <memory>
 #include <iostream>
 
@@ -81,7 +82,7 @@ public:
 
     static void create_profile(vector_shared<BBlock> &super_set,
         std::vector<uint64_t> &exec_path);
-    
+
 private:
 	uint64_t block_addr;
     uint64_t block_tag;
