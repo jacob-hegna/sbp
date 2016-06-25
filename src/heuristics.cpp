@@ -14,6 +14,56 @@
 
 #define FAIL_H 0xFFFFFFFFFFFFFFFF
 
+HeuristicProfile BBlock::profile;
+
+void BBlock::create_profile(vector_shared<BBlock> &super_set, 
+                            std::vector<uint64_t> &exec_path) {
+    uint call_s_correct     = 0;
+    uint call_s_coverage    = 0;
+    float call_s_accuracy   = 0;
+    float test_ratio        = 0.05;
+
+    std::shared_ptr<BBlock> prev_block = nullptr;
+
+    BBlock::profile.call_s_flip = true;
+
+    for(uint i = 0; i < exec_path.size() * test_ratio; ++i) {
+        uint64_t addr = exec_path.at(i);
+        std::shared_ptr<BBlock> block = search_bblocks(super_set, addr, true);
+        if(block == nullptr) continue;
+        if(prev_block == nullptr) {
+            prev_block = block;
+            continue;
+        }
+        if(!block->static_jmp()) {
+            prev_block = block;
+            continue;
+        }
+
+        uint64_t predict = prev_block->predict(&BBlock::call_s_h);
+        if(predict == 0xFFFFFFFFFFFFFFFF) {
+            prev_block = block;
+            continue;
+        }
+
+        if(prev_block->get_fall() != block->get_loc()
+            && prev_block->get_jmp() != block->get_loc()) {
+            prev_block = block;
+            continue;
+        }
+
+
+        if(predict == block->get_loc()) {
+            ++call_s_correct;
+        }
+
+        ++call_s_coverage;
+        prev_block = block;
+    }
+    call_s_accuracy = (float)call_s_correct/(float)call_s_coverage;
+    if(call_s_accuracy < .5) BBlock::profile.call_s_flip ^= true;
+}
+
 uint64_t BBlock::combined_h(uint64_t (BBlock::*indiv_heuristic)()) {
     uint64_t addr = FAIL_H;
 
@@ -26,7 +76,7 @@ uint64_t BBlock::combined_h(uint64_t (BBlock::*indiv_heuristic)()) {
     };
 
     bool debug_mode = (std::find(heuristics.begin(), heuristics.end(), indiv_heuristic) 
-                        != heuristics.end());
+                            != heuristics.end());
 
     if(!debug_mode) {
         // iterate through each heuristic, if any of them don't return the
@@ -39,7 +89,8 @@ uint64_t BBlock::combined_h(uint64_t (BBlock::*indiv_heuristic)()) {
         addr = (this->*indiv_heuristic)();
     }
 
-    if(!debug_mode) prediction = addr;
+    uint64_t (BBlock::*combined_check)() = &BBlock::combined_h;
+    if(!debug_mode && indiv_heuristic != combined_check) prediction = addr;
 
     // if don't know at compile-time where the block branches to, we can't
     // make a prediction
@@ -164,9 +215,17 @@ uint64_t BBlock::call_s_h() {
     if(next_fall_call && next_jmp_call) { // guards against the dual case
         return FAIL_H;
     } else if(next_fall_call) {
-        return fall_shared->get_loc();
+        if(!BBlock::profile.call_s_flip) {
+            return fall_shared->get_loc();
+        } else {
+            return jmp_shared->get_loc();
+        }
     } else if(next_jmp_call) {
-        return jmp_shared->get_loc();
+        if(!BBlock::profile.call_s_flip) {
+            return jmp_shared->get_loc();
+        } else {
+            return fall_shared->get_loc();
+        }
     }
     return FAIL_H;
 }

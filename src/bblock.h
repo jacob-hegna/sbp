@@ -13,6 +13,15 @@
 
 #include "smart_vector.h"
 
+struct HeuristicAccuracy {
+    float accuracy;
+    uint coverage;
+};
+
+struct HeuristicProfile {
+    bool call_s_flip;
+};
+
 class Graph;
 
 class BBlock : public std::enable_shared_from_this<BBlock> {
@@ -69,11 +78,16 @@ public:
 
     // default random heuristic
     uint64_t rand_h();
+
+    static void create_profile(vector_shared<BBlock> &super_set,
+        std::vector<uint64_t> &exec_path);
     
 private:
 	uint64_t block_addr;
     uint64_t block_tag;
     uint64_t prediction;
+
+    static HeuristicProfile profile;
 
     vector_shared<Ins> ins;
 

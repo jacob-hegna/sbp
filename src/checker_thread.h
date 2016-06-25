@@ -8,22 +8,19 @@
 #include "bblock.h"
 #include "smart_vector.h"
 
-struct HeuristicAccuracy {
-    float accuracy;
-    uint coverage;
-};
-
-
 class CheckerThread {
 public:
     CheckerThread() : thread() {
 
     }
     CheckerThread(std::string heuristic_str, uint64_t (BBlock::*heuristic_fn)())
-                  : CheckerThread() {
-        this->path = path;
-        this->heuristic_str = heuristic_str;
-        this->heuristic_fn = heuristic_fn;
+                  : heuristic_str(heuristic_str)
+                  , heuristic_fn(heuristic_fn)
+                  , thread() 
+                  {}
+    CheckerThread(const CheckerThread &obj) {
+        this->heuristic_str = obj.heuristic_str;
+        this->heuristic_fn = obj.heuristic_fn;
     }
     ~CheckerThread() {
         if(thread.joinable()) thread.join();
@@ -45,10 +42,9 @@ public:
     }
 
 private:
-    std::thread thread;
-    std::string path;
     std::string heuristic_str;
     uint64_t (BBlock::*heuristic_fn)();
+    std::thread thread;
 
     static std::vector<uint64_t> exec_path;
     static vector_shared<BBlock> super_set;
