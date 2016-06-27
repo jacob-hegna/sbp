@@ -2,14 +2,14 @@
 
 #include <fstream>
 
-std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
+std::queue<Graph> make_graphs(vector_shared<BBlock> super_set,
                                std::vector<uint64_t> calls) {
-    std::vector<Graph> graphs;
-    
+    std::queue<Graph> graphs;
+
     for(uint64_t call : calls) {
         Graph graph(super_set, call);
         if(graph.get_root() != nullptr)
-            graphs.push_back(graph);
+            graphs.push(graph);
     }
 
     return graphs;

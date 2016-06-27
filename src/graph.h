@@ -4,11 +4,12 @@
 #include <stdint.h>
 #include <vector>
 #include <memory>
+#include <queue>
 
 #include "bblock.h"
 #include "smart_vector.h"
 
-std::vector<Graph> make_graphs(vector_shared<BBlock> super_set,
+std::queue<Graph> make_graphs(vector_shared<BBlock> super_set,
                                std::vector<uint64_t> calls);
 
 class Graph {
