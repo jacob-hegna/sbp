@@ -6,6 +6,7 @@
 #include <mutex>
 
 #include "graph.h"
+#include "smart_vector.h"
 
 class CFGWorker {
 public:
@@ -16,39 +17,32 @@ public:
         if(thread.joinable()) thread.join();
     }
 
-    void start() {
-        thread = std::thread(&CFGWorker::thread_main, this);
-    }
+    void start();
+    void join();
 
-    static void set_graphs(std::queue<Graph> graphs) {
-        CFGWorker::graphs = graphs;
-    }
+    static void set_graphs(std::queue<Graph> graphs);
+    static void find_tendency(std::vector<uint64_t> exec_path,
+                              vector_shared<BBlock> super_set);
+
+    static void set_accuracy(int heuristic, int correct, int total);
+    static float get_accuracy(int heuristic);
+    static int get_coverage(int heuristic);
 
 private:
     std::thread thread;
 
-    static std::queue<Graph> graphs;
-    static std::mutex        graphs_mutex;
+    static std::queue<Graph>  graphs;
+    static std::mutex         graphs_mutex;
 
-    static std::unique_ptr<Graph> get_graph() {
-        std::lock_guard<std::mutex> guard(graphs_mutex);
+    static std::mutex         heuristic_mutex;
+    static std::array<int, 6> heuristic_accuracy;
+    static std::array<int, 6> heuristic_coverage;
 
-        std::unique_ptr<Graph> ret = nullptr;
-        if(graphs.size() > 0) {
-            ret = std::make_unique<Graph>(graphs.front());
-            graphs.pop();
-        }
-        return ret;
-    }
+    static std::unique_ptr<Graph> get_graph();
 
-    void thread_main() {
-        std::unique_ptr<Graph> graph;
-        while((graph = get_graph()) != nullptr) {
-            std::cout << "a" << std::endl;
-        }
-    }
+    void check_accuracy(std::shared_ptr<BBlock> leaf, 
+        vector_shared<BBlock> finished = vector_shared<BBlock>());
+    void thread_main();
 };
-std::queue<Graph> CFGWorker::graphs;
-std::mutex        CFGWorker::graphs_mutex;
 
 #endif

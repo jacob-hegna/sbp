@@ -18,10 +18,12 @@ HeuristicProfile BBlock::profile;
 
 void BBlock::create_profile(vector_shared<BBlock> &super_set, 
                             std::vector<uint64_t> &exec_path) {
+    if(exec_path.size() < 100) return; // skip profiling small test files
+
     uint call_s_correct     = 0;
     uint call_s_coverage    = 0;
     float call_s_accuracy   = 0;
-    float test_ratio        = 0.05;
+    float test_ratio        = 0.02;
 
     std::shared_ptr<BBlock> prev_block = nullptr;
 
@@ -40,7 +42,7 @@ void BBlock::create_profile(vector_shared<BBlock> &super_set,
             continue;
         }
 
-        uint64_t predict = prev_block->predict(&BBlock::call_s_h);
+        uint64_t predict = prev_block->call_s_h();
         if(predict == 0xFFFFFFFFFFFFFFFF) {
             prev_block = block;
             continue;
@@ -64,7 +66,7 @@ void BBlock::create_profile(vector_shared<BBlock> &super_set,
     if(call_s_accuracy < .5) BBlock::profile.call_s_flip ^= true;
 }
 
-uint64_t BBlock::combined_h(uint64_t (BBlock::*indiv_heuristic)()) {
+uint64_t BBlock::combined_h() {
     uint64_t addr = FAIL_H;
 
     auto heuristics = {
@@ -74,23 +76,6 @@ uint64_t BBlock::combined_h(uint64_t (BBlock::*indiv_heuristic)()) {
         &BBlock::return_s_h,
         &BBlock::rand_h
     };
-
-    bool debug_mode = (std::find(heuristics.begin(), heuristics.end(), indiv_heuristic) 
-                            != heuristics.end());
-
-    if(!debug_mode) {
-        // iterate through each heuristic, if any of them don't return the
-        // FAIL_H error code, break out and use that address
-        // Otherwise, it will default to the rand_h heuristic
-        for(auto heuristic : heuristics) {
-            if((addr = (this->*heuristic)()) != FAIL_H) break;
-        }
-    } else {
-        addr = (this->*indiv_heuristic)();
-    }
-
-    uint64_t (BBlock::*combined_check)() = &BBlock::combined_h;
-    if(!debug_mode && indiv_heuristic != combined_check) prediction = addr;
 
     // if don't know at compile-time where the block branches to, we can't
     // make a prediction
@@ -102,6 +87,10 @@ uint64_t BBlock::combined_h(uint64_t (BBlock::*indiv_heuristic)()) {
         if(ins.end()[-2]->get_ins_type() == InsType::CALL) {
             return FAIL_H;
         }
+    }
+
+    for(auto heuristic : heuristics) {
+        if((addr = (this->*heuristic)()) != FAIL_H) break;
     }
 
     return addr;

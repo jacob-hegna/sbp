@@ -36,7 +36,8 @@ std::vector<uint64_t> get_exec_path(std::string path,
         } else if(line.at(0) == ' ') {
             continue; // skip any other line that starts with whitespace
         } else {
-            exec_path.push_back(s_to_uint64(line));
+            uint64_t tag = s_to_uint64(line);
+            exec_path.push_back(tag);
         }
     }
     return exec_path;

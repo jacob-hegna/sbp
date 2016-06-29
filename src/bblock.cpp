@@ -6,7 +6,8 @@ static std::uniform_int_distribution<int> dist(0, 1);
 */
 
 BBlock::BBlock() {
-    prediction = 0xFFFFFFFFFFFFFFFF;
+    fall_count = 0;
+    jmp_count  = 0;
 }
 BBlock::BBlock(uint64_t block_tag, uint64_t block_addr) : BBlock() {
     init(block_tag, block_addr);
@@ -47,14 +48,8 @@ std::string BBlock::print_ins() {
     return ss.str();
 }
 
-uint64_t BBlock::predict(uint64_t (BBlock::*indiv_heuristic)()) {
-    uint64_t ret;
-    if(prediction == 0xFFFFFFFFFFFFFFFF) {
-        ret = this->combined_h(indiv_heuristic);
-    } else {
-        ret = prediction;
-    }
-    return ret;
+uint64_t BBlock::predict() {
+    return this->combined_h();
 }
 
 std::shared_ptr<Jmp> BBlock::get_last() {
