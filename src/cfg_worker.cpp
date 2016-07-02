@@ -22,19 +22,6 @@ void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
                               vector_shared<BBlock> super_set) {
     std::shared_ptr<BBlock> last_block = nullptr;
 
-    std::queue<std::shared_ptr<BBlock>> blocks;
-    TendencyWorker worker;
-
-    std::shared_ptr<BBlock> block;
-    for(uint64_t tag : exec_path) {
-        if((block = search_bblocks(super_set, tag, true)) != nullptr) {
-            blocks.push(block);
-        }
-    }
-
-
-
-
     for(uint64_t tag : exec_path) {
         std::shared_ptr<BBlock> block = search_bblocks(super_set, tag, true);
 
