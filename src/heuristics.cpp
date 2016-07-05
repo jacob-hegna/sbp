@@ -16,7 +16,7 @@
 
 HeuristicProfile BBlock::profile;
 
-void BBlock::create_profile(vector_shared<BBlock> &super_set, 
+void BBlock::create_profile(vector_shared<BBlock> &super_set,
                             std::vector<uint64_t> &exec_path) {
     if(exec_path.size() < 100) return; // skip profiling small test files
 
@@ -74,7 +74,7 @@ uint64_t BBlock::combined_h() {
         &BBlock::opcode_h,
         &BBlock::call_s_h,
         &BBlock::return_s_h,
-        &BBlock::rand_h
+        //&BBlock::rand_h
     };
 
     // if don't know at compile-time where the block branches to, we can't
@@ -96,7 +96,7 @@ uint64_t BBlock::combined_h() {
     return addr;
 }
 
-/* 
+/*
  * detects if the basic block results in a loop, if so, predicts it will always
  * loop back
  */
@@ -262,6 +262,6 @@ uint64_t BBlock::return_s_h() {
 std::random_device BBlock::rd;
 std::mt19937 BBlock::rng(rd());
 std::uniform_int_distribution<int> BBlock::dist(0, 1);
-uint64_t BBlock::rand_h() {    
+uint64_t BBlock::rand_h() {
     return (dist(rng) ? get_jmp() : get_fall());
 }

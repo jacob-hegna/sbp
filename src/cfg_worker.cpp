@@ -1,5 +1,7 @@
 #include "cfg_worker.h"
 
+#include "semaphore/semaphore.h"
+
 std::queue<Graph>  CFGWorker::graphs;
 std::mutex         CFGWorker::graphs_mutex;
 
@@ -18,37 +20,122 @@ void CFGWorker::set_graphs(std::queue<Graph> graphs) {
     CFGWorker::graphs = graphs;
 }
 
-void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
-                              vector_shared<BBlock> super_set) {
-    std::shared_ptr<BBlock> last_block = nullptr;
+
+
+struct BBlockPair {
+    bool poison_pill;
+    std::shared_ptr<BBlock> first;
+    std::shared_ptr<BBlock> second;
+};
+
+std::queue<BBlockPair> block_queue;
+std::mutex mutex;
+Semaphore semaphore;
+
+void tendency_producer(std::vector<uint64_t> exec_path,
+                       vector_shared<BBlock> super_set) {
+    BBlockPair pair;
+    pair.poison_pill = false;
 
     for(uint64_t tag : exec_path) {
-        std::shared_ptr<BBlock> block = search_bblocks(super_set, tag, true);
+        pair.first = search_bblocks(super_set, tag, true);
 
-        if(block == nullptr) {
+        if(pair.first == nullptr) {
+            continue;
+        }
+        if(pair.second == nullptr) {
+            pair.second = pair.first;
             continue;
         }
 
-        if(last_block == nullptr) {
-            last_block = block;
-            continue;
-        }
+        mutex.lock();
+        block_queue.push(pair);
+        mutex.unlock();
 
-        if(!last_block->static_jmp()) {
-            last_block = block;
-            continue;
-        }
+        semaphore.signal();
 
-        if(last_block->get_jmp() == block->get_loc()) {
-            last_block->jmp_count++;
-        }
-
-        if(last_block->get_fall() == block->get_loc()) {
-            last_block->fall_count++;
-        }
-
-        last_block = block;
+        pair.second = pair.first;
     }
+
+    pair.poison_pill = true;
+
+    mutex.lock();
+    block_queue.push(pair);
+    mutex.unlock();
+
+    semaphore.signal();
+}
+
+void tendency_consumer() {
+    int pills = 0;
+    while(true) {
+        semaphore.wait();
+
+        mutex.lock();
+        BBlockPair pair = block_queue.front();
+        block_queue.pop();
+        mutex.unlock();
+
+        if(pair.poison_pill) {
+            pills++;
+            if(pills == 3) {
+                break;
+            } else {
+                continue;
+            }
+        }
+
+        if(!pair.second->static_jmp()) {
+            continue;
+        }
+
+        if(pair.second->get_jmp() == pair.first->get_loc()) {
+            pair.second->jmp_count++;
+        }
+
+        if(pair.second->get_fall() == pair.first->get_loc()) {
+            pair.second->fall_count++;
+        }
+    }
+}
+
+
+/*
+ * producer thread adds a block to a queue then signals a semaphore
+ * multiple consumer threads take it and process it
+ *
+ * producer is faster if it isn't searching whole super_set instead of not
+ * searching whole exec path
+ */
+void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
+                              vector_shared<BBlock> super_set) {
+
+    size_t divison = exec_path.size() / 3;
+
+    std::vector<uint64_t> first = std::vector<uint64_t>(
+        exec_path.begin(),
+        exec_path.begin() + divison
+    );
+    std::vector<uint64_t> second = std::vector<uint64_t>(
+        exec_path.begin() + divison,
+        exec_path.begin() + divison + divison
+    );
+    std::vector<uint64_t> third = std::vector<uint64_t>(
+        exec_path.begin() + divison + divison,
+        exec_path.begin() + divison + divison + divison
+    );
+
+    std::thread producer_1(&tendency_producer, first, super_set);
+    std::thread producer_2(&tendency_producer, second, super_set);
+    std::thread producer_3(&tendency_producer, third, super_set);
+
+    std::thread consumer_1(&tendency_consumer);
+
+    producer_1.join();
+    producer_2.join();
+    producer_3.join();
+
+    consumer_1.join();
 }
 
 void CFGWorker::set_accuracy(int heuristic, int correct, int total) {

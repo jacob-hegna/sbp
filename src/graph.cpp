@@ -8,8 +8,9 @@ std::queue<Graph> make_graphs(vector_shared<BBlock> super_set,
 
     for(uint64_t call : calls) {
         Graph graph(super_set, call);
-        if(graph.get_root() != nullptr)
+        if(graph.get_root() != nullptr) {
             graphs.push(graph);
+        }
     }
 
     return graphs;
@@ -83,7 +84,6 @@ void Graph::init(std::shared_ptr<BBlock> leaf) {
                 block->parents.push_back(leaf);
                 leaf->jmp = block;
             }
-
         }
     }
 }
@@ -147,7 +147,15 @@ std::shared_ptr<BBlock> Graph::search(uint64_t addr) {
 }
 
 std::shared_ptr<BBlock> Graph::search(uint64_t addr, std::shared_ptr<BBlock> leaf,
-                                      vector_shared<BBlock> searched_nodes) {
+                                      bool recursion) {
+    static vector_shared<BBlock> searched_nodes;
+
+    if(!recursion) {
+        searched_nodes = vector_shared<BBlock>();
+    }
+
+    if(leaf == nullptr) return nullptr;
+
     if(std::find(searched_nodes.begin(), searched_nodes.end(), leaf)
          != searched_nodes.end()) {
         return nullptr;
@@ -155,18 +163,17 @@ std::shared_ptr<BBlock> Graph::search(uint64_t addr, std::shared_ptr<BBlock> lea
         searched_nodes.push_back(leaf);
     }
 
-    if(leaf != nullptr) {
-        if(leaf->get_loc() == addr) {
-            return leaf;
-        } else {
-            std::shared_ptr<BBlock> ret = nullptr;
-            if((ret = search(addr, leaf->fall.lock(), searched_nodes)) != nullptr) {
-                return ret;
-            } else if((ret = search(addr, leaf->jmp.lock(), searched_nodes)) != nullptr) {
-                return ret;
-            }
+    if(leaf->get_loc() == addr) {
+        return leaf;
+    } else {
+        std::shared_ptr<BBlock> ret = nullptr;
+        if((ret = search(addr, leaf->fall.lock(), true)) != nullptr) {
+            return ret;
+        } else if((ret = search(addr, leaf->jmp.lock(), true)) != nullptr) {
+            return ret;
         }
     }
+
     return nullptr;
 }
 

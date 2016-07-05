@@ -38,7 +38,7 @@ private:
 
     void init(std::shared_ptr<BBlock> leaf);
     std::shared_ptr<BBlock> search(uint64_t addr, std::shared_ptr<BBlock> leaf,
-        vector_shared<BBlock> searched_nodes = vector_shared<BBlock>());
+        bool recursion = false);
 
     std::string print_dot_file(std::shared_ptr<BBlock> leaf,
         vector_shared<BBlock> &completed);
