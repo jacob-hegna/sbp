@@ -6,7 +6,7 @@
 #include <mutex>
 
 #include "graph.h"
-#include "smart_vector.h"
+#include "../smart_vector.h"
 
 class CFGWorker {
 public:
@@ -40,7 +40,7 @@ private:
 
     static std::unique_ptr<Graph> get_graph();
 
-    void check_accuracy(std::shared_ptr<BBlock> leaf, 
+    void check_accuracy(std::shared_ptr<BBlock> leaf,
         vector_shared<BBlock> finished = vector_shared<BBlock>());
     void thread_main();
 };

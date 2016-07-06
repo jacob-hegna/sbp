@@ -1,6 +1,6 @@
 #include "cfg_worker.h"
 
-#include "semaphore/semaphore.h"
+#include "../semaphore/semaphore.h"
 
 std::queue<Graph>  CFGWorker::graphs;
 std::mutex         CFGWorker::graphs_mutex;
@@ -100,13 +100,6 @@ void tendency_consumer() {
 }
 
 
-/*
- * producer thread adds a block to a queue then signals a semaphore
- * multiple consumer threads take it and process it
- *
- * producer is faster if it isn't searching whole super_set instead of not
- * searching whole exec path
- */
 void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
                               vector_shared<BBlock> super_set) {
 
@@ -184,14 +177,14 @@ void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf,
         return;
     }
 
-    std::array<uint64_t (BBlock::*)(), 6> heuristics = {
+    std::array<uint64_t (BBlock::*)(), 6> heuristics = {{
         &BBlock::combined_h,
         &BBlock::loop_h,
         &BBlock::opcode_h,
         &BBlock::call_s_h,
         &BBlock::return_s_h,
         &BBlock::rand_h
-    };
+    }};
 
     for(uint i = 0; i < heuristics.size(); ++i) {
         leaf->prediction[i] = (leaf.get()->*heuristics[i])();

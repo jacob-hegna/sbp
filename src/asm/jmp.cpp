@@ -1,6 +1,6 @@
 #include "jmp.h"
 
-std::array<std::string, 33> Jmp::jmp_strings = {
+std::array<std::string, 33> Jmp::jmp_strings = {{
     "JMP",
     "JO",
     "JNO",
@@ -34,7 +34,7 @@ std::array<std::string, 33> Jmp::jmp_strings = {
     "JPO",
     "JCXZ",
     "JECXZ"
-};
+}};
 
 /*
  * converts a string to a JmpType

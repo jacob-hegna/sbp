@@ -6,8 +6,8 @@
 #include <memory>
 #include <queue>
 
-#include "bblock.h"
-#include "smart_vector.h"
+#include "../bblock/bblock.h"
+#include "../smart_vector.h"
 
 std::queue<Graph> make_graphs(vector_shared<BBlock> super_set,
                                std::vector<uint64_t> calls);

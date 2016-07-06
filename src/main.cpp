@@ -1,13 +1,12 @@
 #include <iostream>
 #include <string>
-#include <sstream>
-#include <thread>
+#include <vector>
 #include <queue>
 
-#include "bblock.h"
-#include "parse.h"
-#include "graph.h"
-#include "cfg_worker.h"
+#include "bblock/bblock.h"
+#include "parse/parse.h"
+#include "graph/graph.h"
+#include "graph/cfg_worker.h"
 
 int main(int argc, char *argv[]) {
     std::string usage = "Usage: " + std::string(argv[0]) + " -fc <filename> | -h";
@@ -34,7 +33,7 @@ int main(int argc, char *argv[]) {
     CFGWorker::set_graphs(graphs);
     CFGWorker::find_tendency(exec_path, block_file.blocks);
 
-    const uint worker_amt = 5;
+    const uint worker_amt = 10;
     std::array<CFGWorker, worker_amt> workers;
 
     std::cout << "checking heuristics for accuracy" << std::endl;

@@ -5,6 +5,25 @@ static std::mt19937 gen(rd());
 static std::uniform_int_distribution<int> dist(0, 1);
 */
 
+std::shared_ptr<BBlock> search_bblocks(vector_shared<BBlock> &blocks,
+                                      uint64_t addr, bool tag) {
+    std::shared_ptr<BBlock> block = nullptr;
+    for(std::shared_ptr<BBlock> b : blocks) {
+        uint64_t temp_addr; // will store either the iterator b's tag or addr
+        if(tag) {
+            temp_addr = b->get_tag();
+        } else {
+            temp_addr = b->get_loc();
+        }
+        if(addr == temp_addr) {
+            block = b;
+            break;
+        }
+    }
+
+    return block;
+}
+
 BBlock::BBlock() {
     fall_count = 0;
     jmp_count  = 0;

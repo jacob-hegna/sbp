@@ -14,14 +14,6 @@ using vector_weak = std::vector<std::weak_ptr<T>>;
 class BBlock;
 
 /*
- * useful utility function which uses vector_shared
- * if tag is false, we search based on the given address
- * if tag is true, we assume the "address" is actually a block tag
- */
-std::shared_ptr<BBlock> search_bblocks(vector_shared<BBlock> &blocks,
-    uint64_t addr, bool tag = false);
-
-/*
  * lock the contents of a vector_weak
  */
 template<class T>

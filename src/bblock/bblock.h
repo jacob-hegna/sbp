@@ -9,10 +9,10 @@
 #include <memory>
 #include <iostream>
 
-#include "asm/ins.h"
-#include "asm/jmp.h"
+#include "../asm/ins.h"
+#include "../asm/jmp.h"
 
-#include "smart_vector.h"
+#include "../smart_vector.h"
 
 struct HeuristicAccuracy {
     float accuracy;
@@ -24,6 +24,15 @@ struct HeuristicProfile {
 };
 
 class Graph;
+class BBlock;
+
+/*
+ * useful utility function which uses vector_shared
+ * if tag is false, we search based on the given address
+ * if tag is true, we assume the "address" is actually a block tag
+ */
+std::shared_ptr<BBlock> search_bblocks(vector_shared<BBlock> &blocks,
+    uint64_t addr, bool tag = false);
 
 class BBlock : public std::enable_shared_from_this<BBlock> {
     friend class Graph;

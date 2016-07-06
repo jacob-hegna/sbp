@@ -1,10 +1,9 @@
-#include "bblock.h"
-
 #include <functional>
 #include <random>
 #include <algorithm>
 
-#include "graph.h"
+#include "graph/graph.h"
+#include "bblock/bblock.h"
 
 /*
  * 0xFFFFFFFFFFFFFFFF is the hex code I'll use to show the heuristic failed,

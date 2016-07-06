@@ -6,11 +6,11 @@
 #include <memory>
 #include <fstream>
 
-#include "asm/ins.h"
-#include "asm/jmp.h"
+#include "../asm/ins.h"
+#include "../asm/jmp.h"
 
-#include "bblock.h"
-#include "smart_vector.h"
+#include "../bblock/bblock.h"
+#include "../smart_vector.h"
 
 struct BlockFile {
     vector_shared<BBlock> blocks;
