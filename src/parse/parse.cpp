@@ -103,7 +103,7 @@ std::shared_ptr<Ins> parse_ins(std::string line, std::vector<uint64_t> &calls) {
 
 BlockFile parse_file(std::string path) {
     BlockFile block_file;
-    
+
     std::ifstream file(path);
     std::vector<std::string> lines;
 

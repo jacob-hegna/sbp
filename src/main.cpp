@@ -2,11 +2,15 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <chrono>
+#include <functional>
 
 #include "bblock/bblock.h"
 #include "parse/parse.h"
 #include "graph/graph.h"
 #include "graph/cfg_worker.h"
+
+#include "timer_debug.h"
 
 int main(int argc, char *argv[]) {
     std::string usage = "Usage: " + std::string(argv[0]) + " -fc <filename> | -h";
@@ -17,32 +21,24 @@ int main(int argc, char *argv[]) {
 
     std::string path(argv[1]);
 
-    std::cout << "parsing file" << std::endl;
-    BlockFile block_file = parse_file(path);
+    BlockFile block_file = time_debug(parse_file,
+        "parsing file").call(path);
 
-    std::cout << "constructing graphs" << std::endl;
-    std::queue<Graph> graphs = make_graphs(block_file.blocks, block_file.calls);
+    std::queue<Graph> graphs = time_debug(make_graphs,
+        "constructing graphs").call(block_file.blocks, block_file.calls);
 
-    std::cout << "determining execution path" << std::endl;
-    std::vector<uint64_t> exec_path = get_exec_path(path, block_file.blocks);
+    std::vector<uint64_t> exec_path = time_debug(get_exec_path,
+        "determining execution path").call(path, block_file.blocks);
 
-    std::cout << "profiling" << std::endl;
-    BBlock::create_profile(block_file.blocks, exec_path);
+    time_debug(BBlock::create_profile,
+        "profiling").call(block_file.blocks, exec_path);
 
-    std::cout << "determining tendency" << std::endl;
     CFGWorker::set_graphs(graphs);
-    CFGWorker::find_tendency(exec_path, block_file.blocks);
+    time_debug(CFGWorker::find_tendency,
+        "determining tendency").call(exec_path, block_file.blocks);
 
-    const uint worker_amt = 10;
-    std::array<CFGWorker, worker_amt> workers;
-
-    std::cout << "checking heuristics for accuracy" << std::endl;
-    for(auto& worker : workers) {
-        worker.start();
-    }
-    for(auto& worker : workers) {
-        worker.join();
-    }
+    time_debug(CFGWorker::spawn_workers,
+        "checking heuristics for accuracy").call();
 
     for(int i = 0; i < 6; ++i) {
         std::cout << i << " " << CFGWorker::get_accuracy(i) * 100

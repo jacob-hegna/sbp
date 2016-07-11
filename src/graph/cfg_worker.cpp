@@ -16,6 +16,13 @@ void CFGWorker::join() {
     if(thread.joinable()) thread.join();
 }
 
+void CFGWorker::spawn_workers() {
+    std::array<CFGWorker, worker_amt> workers;
+
+    for(auto& worker : workers) worker.start();
+    for(auto& worker : workers) worker.join();
+}
+
 void CFGWorker::set_graphs(std::queue<Graph> graphs) {
     CFGWorker::graphs = graphs;
 }
@@ -78,7 +85,7 @@ void tendency_consumer() {
 
         if(pair.poison_pill) {
             pills++;
-            if(pills == 3) {
+            if(pills == 2) {
                 break;
             } else {
                 continue;
@@ -103,7 +110,7 @@ void tendency_consumer() {
 void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
                               vector_shared<BBlock> super_set) {
 
-    size_t divison = exec_path.size() / 3;
+    size_t divison = exec_path.size() / 4;
 
     std::vector<uint64_t> first = std::vector<uint64_t>(
         exec_path.begin(),
@@ -117,18 +124,26 @@ void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
         exec_path.begin() + divison + divison,
         exec_path.begin() + divison + divison + divison
     );
+    std::vector<uint64_t> fourth = std::vector<uint64_t>(
+        exec_path.begin() + divison + divison + divison,
+        exec_path.end()
+    );
 
     std::thread producer_1(&tendency_producer, first, super_set);
     std::thread producer_2(&tendency_producer, second, super_set);
     std::thread producer_3(&tendency_producer, third, super_set);
+    std::thread producer_4(&tendency_producer, fourth, super_set);
 
     std::thread consumer_1(&tendency_consumer);
+    std::thread consumer_2(&tendency_consumer);
 
     producer_1.join();
     producer_2.join();
     producer_3.join();
+    producer_4.join();
 
     consumer_1.join();
+    consumer_2.join();
 }
 
 void CFGWorker::set_accuracy(int heuristic, int correct, int total) {
@@ -177,9 +192,9 @@ void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf,
         return;
     }
 
-    std::array<uint64_t (BBlock::*)(), 6> heuristics = {{
+    static std::array<uint64_t (BBlock::*)(), 6> heuristics = {{
         &BBlock::combined_h,
-        &BBlock::loop_h,
+        &BBlock::opcode_h,
         &BBlock::opcode_h,
         &BBlock::call_s_h,
         &BBlock::return_s_h,
@@ -213,6 +228,8 @@ void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf,
 void CFGWorker::thread_main() {
     std::unique_ptr<Graph> graph;
     while((graph = get_graph()) != nullptr) {
+        std::cout << graphs.size() << std::endl;
         check_accuracy(graph->get_root());
     }
+    std::cout << "finished" << std::endl;
 }

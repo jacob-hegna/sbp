@@ -69,7 +69,7 @@ uint64_t BBlock::combined_h() {
     uint64_t addr = FAIL_H;
 
     auto heuristics = {
-        &BBlock::loop_h,
+        //&BBlock::loop_h,
         &BBlock::opcode_h,
         &BBlock::call_s_h,
         &BBlock::return_s_h,

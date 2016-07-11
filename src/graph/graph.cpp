@@ -113,17 +113,14 @@ bool Graph::isolated(std::shared_ptr<BBlock> leaf,
 
 bool Graph::dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBlock> dominator,
                             vector_shared<BBlock> finished_blocks) {
-    static std::shared_ptr<BBlock> original;
-    // first iteration of the recursion
-    if(finished_blocks.size() == 0) {
-        original = block;
-    }
 
     if(std::find(finished_blocks.begin(), finished_blocks.end(), block)
         != finished_blocks.end()) {
         return true;
     }
     finished_blocks.push_back(block);
+
+    std::shared_ptr<BBlock> original = finished_blocks.front();
 
     if(block == dominator) return true;
     if(block->parents.size() == 0) return false;

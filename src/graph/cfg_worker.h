@@ -20,6 +20,8 @@ public:
     void start();
     void join();
 
+    static void spawn_workers();
+
     static void set_graphs(std::queue<Graph> graphs);
     static void find_tendency(std::vector<uint64_t> exec_path,
                               vector_shared<BBlock> super_set);
@@ -30,6 +32,8 @@ public:
 
 private:
     std::thread thread;
+
+    static const uint worker_amt = 5;
 
     static std::queue<Graph>  graphs;
     static std::mutex         graphs_mutex;
