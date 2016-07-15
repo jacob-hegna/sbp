@@ -5,6 +5,7 @@
 #include <sstream>
 #include <memory>
 #include <fstream>
+#include <unordered_map>
 
 #include "../asm/ins.h"
 #include "../asm/jmp.h"
@@ -13,12 +14,13 @@
 #include "../smart_vector.h"
 
 struct BlockFile {
-    vector_shared<BBlock> blocks;
+    BlockSet blocks;
+    std::unordered_map<uint64_t, uint64_t> addr_to_tag_map;
     std::vector<uint64_t> calls;
 };
 
 std::vector<uint64_t> get_exec_path(std::string path,
-    vector_shared<BBlock> super_set);
+    BlockSet super_set);
 
 BlockFile parse_file(std::string path);
 

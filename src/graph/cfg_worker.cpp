@@ -40,12 +40,12 @@ std::mutex mutex;
 Semaphore semaphore;
 
 void tendency_producer(std::vector<uint64_t> exec_path,
-                       vector_shared<BBlock> super_set) {
+                       BlockSet super_set) {
     BBlockPair pair;
     pair.poison_pill = false;
 
     for(uint64_t tag : exec_path) {
-        pair.first = search_bblocks(super_set, tag, true);
+        pair.first = BBlock::find(super_set, tag);
 
         if(pair.first == nullptr) {
             continue;
@@ -108,8 +108,7 @@ void tendency_consumer() {
 
 
 void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
-                              vector_shared<BBlock> super_set) {
-
+                              BlockSet super_set) {
     size_t divison = exec_path.size() / 4;
 
     std::vector<uint64_t> first = std::vector<uint64_t>(
@@ -185,16 +184,21 @@ std::unique_ptr<Graph> CFGWorker::get_graph() {
     return ret;
 }
 
-void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf,
-                               vector_shared<BBlock> finished) {
+void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf, bool recursion) {
     if(leaf == nullptr) return;
-    if(std::find(finished.begin(), finished.end(), leaf) != finished.end()) {
+
+    if(recursion == false) {
+        accuracy_finished = vector_shared<BBlock>();
+    }
+
+    if(std::find(accuracy_finished.begin(), accuracy_finished.end(),
+            leaf) != accuracy_finished.end()) {
         return;
     }
 
     static std::array<uint64_t (BBlock::*)(), 6> heuristics = {{
         &BBlock::combined_h,
-        &BBlock::opcode_h,
+        &BBlock::loop_h,
         &BBlock::opcode_h,
         &BBlock::call_s_h,
         &BBlock::return_s_h,
@@ -212,24 +216,22 @@ void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf,
         }
     }
 
-    finished.push_back(leaf);
+    accuracy_finished.push_back(leaf);
 
     if(leaf->jmp.use_count() > 0) {
         std::shared_ptr<BBlock> jmp_shared(leaf->jmp);
-        check_accuracy(jmp_shared, finished);
+        check_accuracy(jmp_shared, true);
     }
 
     if(leaf->fall.use_count() > 0) {
         std::shared_ptr<BBlock> fall_shared(leaf->fall);
-        check_accuracy(fall_shared, finished);
+        check_accuracy(fall_shared, true);
     }
 }
 
 void CFGWorker::thread_main() {
     std::unique_ptr<Graph> graph;
     while((graph = get_graph()) != nullptr) {
-        std::cout << graphs.size() << std::endl;
         check_accuracy(graph->get_root());
     }
-    std::cout << "finished" << std::endl;
 }

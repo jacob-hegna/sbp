@@ -24,6 +24,8 @@ int main(int argc, char *argv[]) {
     BlockFile block_file = time_debug(parse_file,
         "parsing file").call(path);
 
+    BBlock::set_addr_to_tag_map(block_file.addr_to_tag_map);
+
     std::queue<Graph> graphs = time_debug(make_graphs,
         "constructing graphs").call(block_file.blocks, block_file.calls);
 

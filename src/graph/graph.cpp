@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-std::queue<Graph> make_graphs(vector_shared<BBlock> super_set,
+std::queue<Graph> make_graphs(BlockSet super_set,
                                std::vector<uint64_t> calls) {
     std::queue<Graph> graphs;
 
@@ -16,12 +16,11 @@ std::queue<Graph> make_graphs(vector_shared<BBlock> super_set,
     return graphs;
 }
 
-Graph::Graph() {
+Graph::Graph() : dominator_finished(10) {
     root = nullptr;
 }
 
-Graph::Graph(vector_shared<BBlock> super_set, uint64_t addr) {
-    root = nullptr;
+Graph::Graph(BlockSet super_set, uint64_t addr) : Graph() {
     init(super_set, addr);
 }
 
@@ -30,12 +29,12 @@ Graph::Graph(vector_shared<BBlock> super_set, uint64_t addr) {
  * calls the recursive init()
  * public
  */
-void Graph::init(vector_shared<BBlock> super_set, uint64_t leaf) {
+void Graph::init(BlockSet super_set, uint64_t leaf) {
     this->super_set = super_set;
 
-    for(std::shared_ptr<BBlock> block : super_set) {
-        if(block->get_loc() == leaf) root = block;
-    }
+    root = BBlock::find(super_set, leaf, false);
+
+    //if(root == nullptr) std::cout << "memes" << std::endl;
 
     init(root);
 }
@@ -50,42 +49,42 @@ void Graph::init(std::shared_ptr<BBlock> leaf) {
 
     leaf->graph = this;
 
-    for(std::shared_ptr<BBlock> block : super_set) {
-        auto parents_shared = vector_weak_lock<BBlock>(block->parents);
+    auto fall = BBlock::find(super_set, leaf->get_fall(), false);
+    if(fall != nullptr) {
+        auto parents_shared = vector_weak_lock<BBlock>(fall->parents);
 
-        if(block->get_loc() == leaf->get_fall()) {
-            if(search(block->get_loc()) == nullptr) {
-                leaf->fall = block;
-                block->parents.push_back(leaf);
-                init(block);
-            }
-            bool child = (std::find(parents_shared.begin(), parents_shared.end(),
-                                    leaf) != parents_shared.end());
-            if(!child) {
-                block->parents.push_back(leaf);
-                leaf->fall = block;
-            }
+        if(search(fall->get_loc()) == nullptr) {
+            leaf->fall = fall;
+            fall->parents.push_back(leaf);
+            init(fall);
         }
 
-        if(block->get_loc() == leaf->get_jmp()) {
-            if(leaf->get_ins().size() >= 2) {
-                if(leaf->get_ins().end()[-2]->get_ins_type() == InsType::CALL) {
-                    continue;
-                }
-            }
-            if(search(block->get_loc()) == nullptr) {
-                leaf->jmp = block;
-                block->parents.push_back(leaf);
-                init(block);
-            }
-            bool child = (std::find(parents_shared.begin(), parents_shared.end(),
-                                    leaf) != parents_shared.end());
-            if(!child) {
-                block->parents.push_back(leaf);
-                leaf->jmp = block;
-            }
+        bool child = (std::find(parents_shared.begin(), parents_shared.end(),
+                                leaf) != parents_shared.end());
+        if(!child) {
+            fall->parents.push_back(leaf);
+            leaf->fall = fall;
         }
     }
+
+    auto jmp = BBlock::find(super_set, leaf->get_jmp(), false);
+    if(jmp != nullptr) {
+        auto parents_shared = vector_weak_lock<BBlock>(jmp->parents);
+
+        if(search(jmp->get_loc()) == nullptr) {
+            leaf->jmp = jmp;
+            jmp->parents.push_back(leaf);
+            init(jmp);
+        }
+
+        bool child = (std::find(parents_shared.begin(), parents_shared.end(),
+                                leaf) != parents_shared.end());
+        if(!child) {
+            jmp->parents.push_back(leaf);
+            leaf->jmp = jmp;
+        }
+    }
+
 }
 
 bool Graph::isolated(std::shared_ptr<BBlock> leaf,
@@ -111,16 +110,24 @@ bool Graph::isolated(std::shared_ptr<BBlock> leaf,
     return correct;
 }
 
-bool Graph::dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBlock> dominator,
-                            vector_shared<BBlock> finished_blocks) {
+bool Graph::dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBlock> dominator) {
+    vector_shared<BBlock> finished;
+    return dominator_check(block, dominator, finished);
+}
 
-    if(std::find(finished_blocks.begin(), finished_blocks.end(), block)
-        != finished_blocks.end()) {
+bool Graph::dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBlock> dominator,
+                            vector_shared<BBlock> &finished) {
+
+    if(block == nullptr) return false;
+
+    if(std::find(finished.begin(), finished.end(), block)
+        != finished.end()) {
         return true;
     }
-    finished_blocks.push_back(block);
 
-    std::shared_ptr<BBlock> original = finished_blocks.front();
+    finished.push_back(block);
+
+    std::shared_ptr<BBlock> original = finished.front();
 
     if(block == dominator) return true;
     if(block->parents.size() == 0) return false;
@@ -131,7 +138,7 @@ bool Graph::dominator_check(std::shared_ptr<BBlock> block, std::shared_ptr<BBloc
     auto parents_lock = vector_weak_lock<BBlock>(block->parents);
     for(std::shared_ptr<BBlock> parent : parents_lock) {
         //if(block != original && parent == original) return false;
-        if(dominator_check(parent, dominator, finished_blocks) == false) {
+        if(dominator_check(parent, dominator, finished) == false) {
             return false;
         }
     }

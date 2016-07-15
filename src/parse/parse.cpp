@@ -12,7 +12,7 @@ uint64_t s_to_uint64(std::string s) {
 }
 
 std::vector<uint64_t> get_exec_path(std::string path,
-                                    vector_shared<BBlock> super_set) {
+                            BlockSet super_set) {
     std::vector<uint64_t> exec_path;
     std::ifstream file(path);
 
@@ -29,7 +29,7 @@ std::vector<uint64_t> get_exec_path(std::string path,
             uint64_t addr = s_to_uint64(line.substr(2, 18));
 
             std::shared_ptr<BBlock> block;
-            if((block = search_bblocks(super_set, addr)) != nullptr &&
+            if((block = BBlock::find(super_set, addr, false)) != nullptr &&
                 block->get_tag() != exec_path.back()) {
                 exec_path.push_back(addr);
             }
@@ -152,6 +152,7 @@ BlockFile parse_file(std::string path) {
             }
 
             auto block = std::make_shared<BBlock>(block_tag, ins.at(0)->get_loc());
+            block_file.addr_to_tag_map.insert({ins.at(0)->get_loc(), block_tag});
 
             // check if the basic block branches statically or not
             if(ins.back()->get_ins_type() != InsType::JMP) {
@@ -174,7 +175,7 @@ BlockFile parse_file(std::string path) {
             block->set_ins(ins);
             ins.clear();
 
-            block_file.blocks.push_back(block);
+            block_file.blocks.insert({block_tag, block});
 
             block_tag = 0xFFFFFFFFFFFFFFFF;
             last_ins_type = InsType::INS;

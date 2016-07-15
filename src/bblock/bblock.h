@@ -8,6 +8,8 @@
 #include <random>
 #include <memory>
 #include <iostream>
+#include <unordered_map>
+#include <sys/types.h>
 
 #include "../asm/ins.h"
 #include "../asm/jmp.h"
@@ -25,6 +27,8 @@ struct HeuristicProfile {
 
 class Graph;
 class BBlock;
+
+typedef std::unordered_map<uint64_t, std::shared_ptr<BBlock>> BlockSet;
 
 /*
  * useful utility function which uses vector_shared
@@ -87,8 +91,13 @@ public:
     // default random heuristic
     uint64_t rand_h();
 
-    static void create_profile(vector_shared<BBlock> &super_set,
+    static void create_profile(BlockSet &super_set,
         std::vector<uint64_t> &exec_path);
+
+    static void set_addr_to_tag_map(std::unordered_map<uint64_t, uint64_t> map);
+    static uint64_t addr_to_tag(uint64_t addr);
+    static std::shared_ptr<BBlock> find(BlockSet super_set,
+        uint64_t search, bool tag = true);
 
     uint fall_count;
     uint jmp_count;
@@ -99,6 +108,8 @@ private:
     uint64_t block_tag;
 
     static HeuristicProfile profile;
+
+    static std::unordered_map<uint64_t, uint64_t> addr_to_tag_map;
 
     vector_shared<Ins> ins;
 

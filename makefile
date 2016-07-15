@@ -10,11 +10,11 @@ IFILES      = $(shell find $(SOURCEDIR) -name '*.cpp')
 
 OFILES      = $(subst $(SOURCEDIR), $(BUILDDIR), $(addsuffix .o, $(notdir $(shell find $(SOURCEDIR)  -name '*.cpp'))))
 
-CC          = g++
+CC          = /usr/local/bin/g++-5
 LINKER      = $(CC)
 ARCH        = 64
 
-CCFLAGS     = -c -Wall -g -O3 -pthread -m$(ARCH) -std=c++11
+CCFLAGS     = -c -Wall -g -O2 -pthread -m$(ARCH) -std=c++11
 LINKFLAGS   = -m$(ARCH) -pthread
 
 

@@ -119,3 +119,30 @@ vector_shared<Ins> BBlock::get_ins() {
 vector_weak<BBlock> BBlock::get_parents() {
     return parents;
 }
+
+std::unordered_map<uint64_t, uint64_t> BBlock::addr_to_tag_map;
+
+void BBlock::set_addr_to_tag_map(std::unordered_map<uint64_t, uint64_t> map) {
+    BBlock::addr_to_tag_map = map;
+}
+uint64_t BBlock::addr_to_tag(uint64_t addr) {
+    auto search = BBlock::addr_to_tag_map.find(addr);
+    if(search == BBlock::addr_to_tag_map.end()) {
+        return 0xFFFFFFFFFFFFFFFF;
+    } else {
+        return (*search).second;
+    }
+}
+
+std::shared_ptr<BBlock> BBlock::find(BlockSet super_set,
+                      uint64_t search, bool tag) {
+    if(!tag) {
+        search = BBlock::addr_to_tag(search);
+    }
+    auto result = super_set.find(search);
+    if(result == super_set.end()) {
+        return nullptr;
+    } else {
+        return result->second;
+    }
+}

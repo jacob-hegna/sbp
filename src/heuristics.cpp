@@ -15,7 +15,7 @@
 
 HeuristicProfile BBlock::profile;
 
-void BBlock::create_profile(vector_shared<BBlock> &super_set,
+void BBlock::create_profile(BlockSet &super_set,
                             std::vector<uint64_t> &exec_path) {
     if(exec_path.size() < 100) return; // skip profiling small test files
 
@@ -30,7 +30,7 @@ void BBlock::create_profile(vector_shared<BBlock> &super_set,
 
     for(uint i = 0; i < exec_path.size() * test_ratio; ++i) {
         uint64_t addr = exec_path.at(i);
-        std::shared_ptr<BBlock> block = search_bblocks(super_set, addr, true);
+        auto block = BBlock::find(super_set, addr);
         if(block == nullptr) continue;
         if(prev_block == nullptr) {
             prev_block = block;
@@ -69,11 +69,11 @@ uint64_t BBlock::combined_h() {
     uint64_t addr = FAIL_H;
 
     auto heuristics = {
-        //&BBlock::loop_h,
+        &BBlock::loop_h,
         &BBlock::opcode_h,
         &BBlock::call_s_h,
         &BBlock::return_s_h,
-        //&BBlock::rand_h
+        &BBlock::rand_h
     };
 
     // if don't know at compile-time where the block branches to, we can't
@@ -246,10 +246,10 @@ uint64_t BBlock::return_s_h() {
 
     if(next_fall_ret && next_jmp_ret) { // guards against the dual case
         return FAIL_H;
-    } else if(next_fall_ret) {          // note the returns are the converse
-        return jmp_shared->get_loc();          // of what would normally be expected
-    } else if(next_jmp_ret) {
+    } else if(next_fall_ret) {
         return fall_shared->get_loc();
+    } else if(next_jmp_ret) {
+        return jmp_shared->get_loc();
     }
     return FAIL_H;
 

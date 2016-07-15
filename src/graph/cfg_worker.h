@@ -24,7 +24,7 @@ public:
 
     static void set_graphs(std::queue<Graph> graphs);
     static void find_tendency(std::vector<uint64_t> exec_path,
-                              vector_shared<BBlock> super_set);
+                              BlockSet super_set);
 
     static void set_accuracy(int heuristic, int correct, int total);
     static float get_accuracy(int heuristic);
@@ -33,7 +33,9 @@ public:
 private:
     std::thread thread;
 
-    static const uint worker_amt = 5;
+    vector_shared<BBlock> accuracy_finished;
+
+    static const uint worker_amt = 1;
 
     static std::queue<Graph>  graphs;
     static std::mutex         graphs_mutex;
@@ -44,8 +46,7 @@ private:
 
     static std::unique_ptr<Graph> get_graph();
 
-    void check_accuracy(std::shared_ptr<BBlock> leaf,
-        vector_shared<BBlock> finished = vector_shared<BBlock>());
+    void check_accuracy(std::shared_ptr<BBlock> leaf, bool recursion = false);
     void thread_main();
 };
 
