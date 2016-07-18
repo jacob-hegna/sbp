@@ -27,6 +27,7 @@ std::shared_ptr<BBlock> search_bblocks(vector_shared<BBlock> &blocks,
 BBlock::BBlock() {
     fall_count = 0;
     jmp_count  = 0;
+    graph = nullptr;
 }
 BBlock::BBlock(uint64_t block_tag, uint64_t block_addr) : BBlock() {
     init(block_tag, block_addr);
