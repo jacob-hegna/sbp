@@ -105,18 +105,12 @@ BlockFile parse_file(std::string path) {
     BlockFile block_file;
 
     std::ifstream file(path);
-    std::vector<std::string> lines;
-
-    for(std::string line; getline(file, line);) {
-        lines.push_back(line);
-    }
-    file.close();
 
     uint64_t block_tag = 0xFFFFFFFFFFFFFFFF;
     vector_shared<Ins> ins;
     InsType last_ins_type = InsType::INS;
 
-    for(std::string line : lines) {
+    for(std::string line; getline(file, line);) {
         if(line.length() == 0) continue;
 
         // the only lines without a space in the first column are "Block #:" and
@@ -181,6 +175,8 @@ BlockFile parse_file(std::string path) {
             last_ins_type = InsType::INS;
         }
     }
+
+    file.close();
 
     return block_file;
 }
