@@ -44,14 +44,7 @@ void tendency_producer(std::vector<uint64_t> exec_path,
     BBlockPair pair;
     pair.poison_pill = false;
 
-    int i = 0;
-
     for(uint64_t tag : exec_path) {
-        i++;
-        if((exec_path.size() - i) % 5000 == 0) {
-            std::cout << (exec_path.size() - i) << std::endl;
-        }
-
         pair.first = BBlock::find(super_set, tag);
 
         if(pair.first == nullptr) {
@@ -92,7 +85,7 @@ void tendency_consumer() {
 
         if(pair.poison_pill) {
             pills++;
-            if(pills == 2) {
+            if(pills == 1) {
                 break;
             } else {
                 continue;
@@ -116,40 +109,12 @@ void tendency_consumer() {
 
 void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
                               BlockSet super_set) {
-    size_t divison = exec_path.size() / 4;
 
-    std::vector<uint64_t> first = std::vector<uint64_t>(
-        exec_path.begin(),
-        exec_path.begin() + divison
-    );
-    std::vector<uint64_t> second = std::vector<uint64_t>(
-        exec_path.begin() + divison,
-        exec_path.begin() + divison + divison
-    );
-    std::vector<uint64_t> third = std::vector<uint64_t>(
-        exec_path.begin() + divison + divison,
-        exec_path.begin() + divison + divison + divison
-    );
-    std::vector<uint64_t> fourth = std::vector<uint64_t>(
-        exec_path.begin() + divison + divison + divison,
-        exec_path.end()
-    );
+    std::thread producer(&tendency_producer, exec_path, super_set);
+    std::thread consumer(&tendency_consumer);
 
-    std::thread producer_1(&tendency_producer, first, super_set);
-    std::thread producer_2(&tendency_producer, second, super_set);
-    std::thread producer_3(&tendency_producer, third, super_set);
-    std::thread producer_4(&tendency_producer, fourth, super_set);
-
-    std::thread consumer_1(&tendency_consumer);
-    std::thread consumer_2(&tendency_consumer);
-
-    producer_1.join();
-    producer_2.join();
-    producer_3.join();
-    producer_4.join();
-
-    consumer_1.join();
-    consumer_2.join();
+    producer.join();
+    consumer.join();
 }
 
 void CFGWorker::set_accuracy(int heuristic, int correct, int total) {
