@@ -44,7 +44,14 @@ void tendency_producer(std::vector<uint64_t> exec_path,
     BBlockPair pair;
     pair.poison_pill = false;
 
+    int i = 0;
+
     for(uint64_t tag : exec_path) {
+        i++;
+        if((exec_path.size() - i) % 5000 == 0) {
+            std::cout << (exec_path.size() - i) << std::endl;
+        }
+
         pair.first = BBlock::find(super_set, tag);
 
         if(pair.first == nullptr) {

@@ -96,7 +96,7 @@ public:
 
     static void set_addr_to_tag_map(std::unordered_map<uint64_t, uint64_t> map);
     static uint64_t addr_to_tag(uint64_t addr);
-    static std::shared_ptr<BBlock> find(BlockSet super_set,
+    static std::shared_ptr<BBlock> find(BlockSet &super_set,
         uint64_t search, bool tag = true);
 
     uint fall_count;

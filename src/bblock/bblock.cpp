@@ -134,7 +134,7 @@ uint64_t BBlock::addr_to_tag(uint64_t addr) {
     }
 }
 
-std::shared_ptr<BBlock> BBlock::find(BlockSet super_set,
+std::shared_ptr<BBlock> BBlock::find(BlockSet &super_set,
                       uint64_t search, bool tag) {
     if(!tag) {
         search = BBlock::addr_to_tag(search);
