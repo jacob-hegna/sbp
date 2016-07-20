@@ -10,7 +10,7 @@ IFILES      = $(shell find $(SOURCEDIR) -name '*.cpp')
 
 OFILES      = $(subst $(SOURCEDIR), $(BUILDDIR), $(addsuffix .o, $(notdir $(shell find $(SOURCEDIR)  -name '*.cpp'))))
 
-CC          = g++
+CC          = clang++
 LINKER      = $(CC)
 ARCH        = 64
 

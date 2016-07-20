@@ -73,7 +73,7 @@ uint64_t BBlock::combined_h() {
         &BBlock::opcode_h,
         &BBlock::call_s_h,
         &BBlock::return_s_h,
-        &BBlock::rand_h
+        //&BBlock::rand_h
     };
 
     // if don't know at compile-time where the block branches to, we can't

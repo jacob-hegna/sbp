@@ -7,6 +7,7 @@
 
 #include "graph.h"
 #include "../smart_vector.h"
+#include "../semaphore/semaphore.h"
 
 class CFGWorker {
 public:
@@ -33,9 +34,10 @@ public:
 private:
     std::thread thread;
 
-    vector_shared<BBlock> accuracy_finished;
+    static vector_shared<BBlock> accuracy_finished;
+    static std::mutex            accuracy_mutex;
 
-    static const uint worker_amt = 1;
+    static const uint worker_amt = 3;
 
     static std::queue<Graph>  graphs;
     static std::mutex         graphs_mutex;
@@ -46,8 +48,33 @@ private:
 
     static std::unique_ptr<Graph> get_graph();
 
-    void check_accuracy(std::shared_ptr<BBlock> leaf, bool recursion = false);
+    void check_accuracy(std::shared_ptr<BBlock> leaf);
     void thread_main();
 };
 
+
+class TendencyWorker {
+public:
+    TendencyWorker();
+    ~TendencyWorker();
+
+    void spawn(std::vector<uint64_t> exec_path, BlockSet super_set);
+    void join();
+private:
+    std::thread producer_thread;
+    std::thread consumer_thread;
+
+    struct BBlockPair {
+        bool poison_pill;
+        std::shared_ptr<BBlock> first;
+        std::shared_ptr<BBlock> second;
+    };
+
+    std::queue<BBlockPair> block_queue;
+    std::mutex mutex;
+    Semaphore semaphore;
+
+    void producer(std::vector<uint64_t> exec_path, BlockSet super_set);
+    void consumer();
+};
 #endif

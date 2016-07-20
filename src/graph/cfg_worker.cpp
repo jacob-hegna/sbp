@@ -1,6 +1,7 @@
 #include "cfg_worker.h"
 
-#include "../semaphore/semaphore.h"
+vector_shared<BBlock> CFGWorker::accuracy_finished;
+std::mutex            CFGWorker::accuracy_mutex;
 
 std::queue<Graph>  CFGWorker::graphs;
 std::mutex         CFGWorker::graphs_mutex;
@@ -27,94 +28,11 @@ void CFGWorker::set_graphs(std::queue<Graph> graphs) {
     CFGWorker::graphs = graphs;
 }
 
-
-
-struct BBlockPair {
-    bool poison_pill;
-    std::shared_ptr<BBlock> first;
-    std::shared_ptr<BBlock> second;
-};
-
-std::queue<BBlockPair> block_queue;
-std::mutex mutex;
-Semaphore semaphore;
-
-void tendency_producer(std::vector<uint64_t> exec_path,
-                       BlockSet super_set) {
-    BBlockPair pair;
-    pair.poison_pill = false;
-
-    for(uint64_t tag : exec_path) {
-        pair.first = BBlock::find(super_set, tag);
-
-        if(pair.first == nullptr) {
-            continue;
-        }
-        if(pair.second == nullptr) {
-            pair.second = pair.first;
-            continue;
-        }
-
-        mutex.lock();
-        block_queue.push(pair);
-        mutex.unlock();
-
-        semaphore.signal();
-
-        pair.second = pair.first;
-    }
-
-    pair.poison_pill = true;
-
-    mutex.lock();
-    block_queue.push(pair);
-    mutex.unlock();
-
-    semaphore.signal();
-}
-
-void tendency_consumer() {
-    int pills = 0;
-    while(true) {
-        semaphore.wait();
-
-        mutex.lock();
-        BBlockPair pair = block_queue.front();
-        block_queue.pop();
-        mutex.unlock();
-
-        if(pair.poison_pill) {
-            pills++;
-            if(pills == 1) {
-                break;
-            } else {
-                continue;
-            }
-        }
-
-        if(!pair.second->static_jmp()) {
-            continue;
-        }
-
-        if(pair.second->get_jmp() == pair.first->get_loc()) {
-            pair.second->jmp_count++;
-        }
-
-        if(pair.second->get_fall() == pair.first->get_loc()) {
-            pair.second->fall_count++;
-        }
-    }
-}
-
-
 void CFGWorker::find_tendency(std::vector<uint64_t> exec_path,
                               BlockSet super_set) {
-
-    std::thread producer(&tendency_producer, exec_path, super_set);
-    std::thread consumer(&tendency_consumer);
-
-    producer.join();
-    consumer.join();
+    TendencyWorker worker;
+    worker.spawn(exec_path, super_set);
+    worker.join();
 }
 
 void CFGWorker::set_accuracy(int heuristic, int correct, int total) {
@@ -156,16 +74,16 @@ std::unique_ptr<Graph> CFGWorker::get_graph() {
     return ret;
 }
 
-void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf, bool recursion) {
+void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf) {
     if(leaf == nullptr) return;
 
-    if(recursion == false) {
-        accuracy_finished = vector_shared<BBlock>();
-    }
-
-    if(std::find(accuracy_finished.begin(), accuracy_finished.end(),
-            leaf) != accuracy_finished.end()) {
-        return;
+    {
+        std::lock_guard<std::mutex> guard(accuracy_mutex);
+        if(std::find(accuracy_finished.begin(), accuracy_finished.end(),
+                leaf) != accuracy_finished.end()) {
+            return;
+        }
+        accuracy_finished.push_back(leaf);
     }
 
     static std::array<uint64_t (BBlock::*)(), 6> heuristics = {{
@@ -188,16 +106,14 @@ void CFGWorker::check_accuracy(std::shared_ptr<BBlock> leaf, bool recursion) {
         }
     }
 
-    accuracy_finished.push_back(leaf);
-
     if(leaf->jmp.use_count() > 0) {
         std::shared_ptr<BBlock> jmp_shared(leaf->jmp);
-        check_accuracy(jmp_shared, true);
+        check_accuracy(jmp_shared);
     }
 
     if(leaf->fall.use_count() > 0) {
         std::shared_ptr<BBlock> fall_shared(leaf->fall);
-        check_accuracy(fall_shared, true);
+        check_accuracy(fall_shared);
     }
 }
 
@@ -205,5 +121,90 @@ void CFGWorker::thread_main() {
     std::unique_ptr<Graph> graph;
     while((graph = get_graph()) != nullptr) {
         check_accuracy(graph->get_root());
+    }
+}
+
+TendencyWorker::TendencyWorker() {
+    producer_thread = std::thread();
+    consumer_thread = std::thread();
+}
+
+TendencyWorker::~TendencyWorker() {
+    this->join();
+}
+
+void TendencyWorker::spawn(std::vector<uint64_t> exec_path, BlockSet super_set) {
+    producer_thread = std::thread(&TendencyWorker::producer, this, exec_path, super_set);
+    consumer_thread = std::thread(&TendencyWorker::consumer, this);
+}
+
+void TendencyWorker::join() {
+    if(producer_thread.joinable()) producer_thread.join();
+    if(consumer_thread.joinable()) consumer_thread.join();
+}
+
+void TendencyWorker::producer(std::vector<uint64_t> exec_path, BlockSet super_set) {
+    BBlockPair pair;
+    pair.poison_pill = false;
+
+    for(uint64_t tag : exec_path) {
+        pair.first = BBlock::find(super_set, tag);
+
+        if(pair.first == nullptr) {
+            continue;
+        }
+        if(pair.second == nullptr) {
+            pair.second = pair.first;
+            continue;
+        }
+
+        mutex.lock();
+        block_queue.push(pair);
+        mutex.unlock();
+
+        semaphore.signal();
+
+        pair.second = pair.first;
+    }
+
+    pair.poison_pill = true;
+
+    mutex.lock();
+    block_queue.push(pair);
+    mutex.unlock();
+
+    semaphore.signal();
+}
+
+void TendencyWorker::consumer() {
+    int pills = 0;
+    while(true) {
+        semaphore.wait();
+
+        mutex.lock();
+        BBlockPair pair = block_queue.front();
+        block_queue.pop();
+        mutex.unlock();
+
+        if(pair.poison_pill) {
+            pills++;
+            if(pills == 1) {
+                break;
+            } else {
+                continue;
+            }
+        }
+
+        if(!pair.second->static_jmp()) {
+            continue;
+        }
+
+        if(pair.second->get_jmp() == pair.first->get_loc()) {
+            pair.second->jmp_count++;
+        }
+
+        if(pair.second->get_fall() == pair.first->get_loc()) {
+            pair.second->fall_count++;
+        }
     }
 }
